@@ -12,7 +12,7 @@ return [
                 /*
                  * Route for accessing api documentation interface
                  */
-                'api' => 'docs',
+                'api' => 'api/documentation',
             ],
             'paths' => [
                 /*
@@ -72,7 +72,7 @@ return [
             /*
              * Route for accessing api documentation interface
              */
-            'api' => 'docs',
+            'api' => 'api/documentation',
 
             /*
              * Route for Oauth2 authentication callback.
