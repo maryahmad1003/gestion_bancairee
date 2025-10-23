@@ -1,6 +1,6 @@
 FROM php:8.2-fpm
 
-# Installations système
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpng-dev \
@@ -12,65 +12,99 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     git \
-    libpq-dev \
     nginx \
     supervisor \
-    && docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
+    && docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Composer
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Set working directory
 WORKDIR /var/www
 
+# Copy application code
 COPY . .
 
+# Install PHP dependencies
 RUN composer install --ignore-platform-reqs --no-dev --optimize-autoloader
 
-# Permissions
+# Set permissions
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage \
     && chmod -R 755 /var/www/bootstrap/cache
 
 # Configure Nginx
+RUN rm -f /etc/nginx/sites-enabled/default
 RUN echo 'server {\
-    listen 80;\
-    server_name localhost;\
+    listen 80 default_server;\
+    listen [::]:80 default_server;\
     root /var/www/public;\
     index index.php index.html index.htm;\
+    server_name _;\
     \
     location / {\
         try_files $uri $uri/ /index.php?$query_string;\
     }\
     \
     location ~ \.php$ {\
+        include fastcgi_params;\
         fastcgi_pass 127.0.0.1:9000;\
         fastcgi_index index.php;\
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\
-        include fastcgi_params;\
+        fastcgi_param PATH_INFO $fastcgi_path_info;\
     }\
     \
     location ~ /\.ht {\
         deny all;\
     }\
+    \
+    error_log /var/log/nginx/error.log;\
+    access_log /var/log/nginx/access.log;\
 }' > /etc/nginx/sites-available/default
 
+RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
+
+# Configure PHP-FPM
+RUN sed -i 's/listen = \/run\/php\/php8.2-fpm.sock/listen = 127.0.0.1:9000/g' /etc/php/8.2/fpm/pool.d/www.conf
+
 # Configure Supervisor
+RUN mkdir -p /etc/supervisor/conf.d /var/log/supervisor
 RUN echo '[supervisord]\
 nodaemon=true\
+user=root\
 \
 [program:nginx]\
 command=/usr/sbin/nginx -g "daemon off;"\
+directory=/var/www\
 autostart=true\
 autorestart=true\
+stdout_logfile=/dev/stdout\
+stdout_logfile_maxbytes=0\
+stderr_logfile=/dev/stderr\
+stderr_logfile_maxbytes=0\
 \
 [program:php-fpm]\
 command=/usr/local/sbin/php-fpm\
+directory=/var/www\
 autostart=true\
 autorestart=true\
+stdout_logfile=/dev/stdout\
+stdout_logfile_maxbytes=0\
+stderr_logfile=/dev/stderr\
+stderr_logfile_maxbytes=0\
 ' > /etc/supervisor/conf.d/supervisord.conf
 
-# Expose port 80 for web traffic
+# Create log directories
+RUN mkdir -p /var/log/nginx /var/log/supervisor
+
+# Expose port 80
 EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
 
 # Start Supervisor
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
