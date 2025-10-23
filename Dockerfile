@@ -81,30 +81,31 @@ pm.max_spare_servers = 3\n\
 
 # Configure Supervisor
 RUN mkdir -p /etc/supervisor/conf.d /var/log/supervisor
-RUN echo '[supervisord]\
-nodaemon=true\
-user=root\
-\
-[program:nginx]\
-command=/usr/sbin/nginx -g "daemon off;"\
-directory=/var/www\
-autostart=true\
-autorestart=true\
-stdout_logfile=/dev/stdout\
-stdout_logfile_maxbytes=0\
-stderr_logfile=/dev/stderr\
-stderr_logfile_maxbytes=0\
-\
-[program:php-fpm]\
-command=/usr/local/sbin/php-fpm\
-directory=/var/www\
-autostart=true\
-autorestart=true\
-stdout_logfile=/dev/stdout\
-stdout_logfile_maxbytes=0\
-stderr_logfile=/dev/stderr\
-stderr_logfile_maxbytes=0\
-' > /etc/supervisor/conf.d/supervisord.conf
+COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
+[supervisord]
+nodaemon=true
+user=root
+
+[program:nginx]
+command=/usr/sbin/nginx -g "daemon off;"
+directory=/var/www
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
+[program:php-fpm]
+command=/usr/local/sbin/php-fpm
+directory=/var/www
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+EOF
 
 # Create log directories
 RUN mkdir -p /var/log/nginx /var/log/supervisor
