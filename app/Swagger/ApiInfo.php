@@ -13,7 +13,7 @@ namespace App\Swagger;
  *         ),
  *     ),
  *     @OA\Server(
- *         url="http://localhost:8000/api/v1",
+ *         url="http://localhost:8000",
  *         description="Serveur de développement"
  *     ),
  *     @OA\Tag(
