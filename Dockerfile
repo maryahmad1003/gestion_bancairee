@@ -67,7 +67,9 @@ RUN echo 'server {\
 RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
 
 # Configure PHP-FPM
-RUN sed -i 's/listen = \/run\/php\/php8.2-fpm.sock/listen = 127.0.0.1:9000/g' /etc/php/8.2/fpm/pool.d/www.conf
+RUN mkdir -p /run/php && \
+    sed -i 's/listen = \/run\/php\/php8.2-fpm.sock/listen = 127.0.0.1:9000/g' /etc/php/8.2/fpm/pool.d/www.conf || \
+    echo '[www]\nlisten = 127.0.0.1:9000\nuser = www-data\ngroup = www-data\npm = dynamic\npm.max_children = 5\npm.start_servers = 2\npm.min_spare_servers = 1\npm.max_spare_servers = 3' > /etc/php/8.2/fpm/pool.d/www.conf
 
 # Configure Supervisor
 RUN mkdir -p /etc/supervisor/conf.d /var/log/supervisor
