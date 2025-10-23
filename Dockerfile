@@ -31,4 +31,5 @@ RUN chown -R www-data:www-data /var/www \
 
 EXPOSE 9000
 
+# Use php-fpm for production
 CMD ["php-fpm"]

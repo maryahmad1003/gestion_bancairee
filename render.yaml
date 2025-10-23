@@ -1,10 +1,8 @@
 services:
   - type: web
-    name: laravel-api
+    name: laravel-banking-api
     runtime: docker
     plan: starter
-    buildCommand: docker build -t laravel-api .
-    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
     envVars:
       - key: APP_NAME
         value: Laravel Banking API
@@ -17,7 +15,7 @@ services:
       - key: APP_URL
         fromService:
           type: web
-          name: laravel-api
+          name: laravel-banking-api
           property: host
       - key: LOG_CHANNEL
         value: stack
@@ -34,16 +32,6 @@ services:
       - key: DB_USERNAME
         value: neondb_owner
       - key: DB_PASSWORD
-        value: npg_N3MKug0mkzFD
-      - key: NEON_HOST
-        value: ep-wandering-haze-a4wqipnd-pooler.us-east-1.aws.neon.tech
-      - key: NEON_PORT
-        value: 5432
-      - key: NEON_DATABASE
-        value: neondb
-      - key: NEON_USERNAME
-        value: neondb_owner
-      - key: NEON_PASSWORD
         value: npg_N3MKug0mkzFD
       - key: BROADCAST_DRIVER
         value: log
@@ -64,7 +52,5 @@ services:
       - key: L5_SWAGGER_BASE_PATH
         fromService:
           type: web
-          name: laravel-api
+          name: laravel-banking-api
           property: host
-
-# Base de données Neon externe - pas besoin de créer une base sur Render
