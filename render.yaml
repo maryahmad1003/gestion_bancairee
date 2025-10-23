@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: laravel-api
+    runtime: docker
+    plan: starter
+    buildCommand: docker build -t laravel-api .
+    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+    envVars:
+      - key: APP_NAME
+        value: Laravel Banking API
+      - key: APP_ENV
+        value: production
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_DEBUG
+        value: false
+      - key: APP_URL
+        fromService:
+          type: web
+          name: laravel-api
+          property: host
+      - key: LOG_CHANNEL
+        value: stack
+      - key: LOG_LEVEL
+        value: error
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        value: ep-wandering-haze-a4wqipnd-pooler.us-east-1.aws.neon.tech
+      - key: DB_PORT
+        value: 5432
+      - key: DB_DATABASE
+        value: neondb
+      - key: DB_USERNAME
+        value: neondb_owner
+      - key: DB_PASSWORD
+        value: npg_N3MKug0mkzFD
+      - key: NEON_HOST
+        value: ep-wandering-haze-a4wqipnd-pooler.us-east-1.aws.neon.tech
+      - key: NEON_PORT
+        value: 5432
+      - key: NEON_DATABASE
+        value: neondb
+      - key: NEON_USERNAME
+        value: neondb_owner
+      - key: NEON_PASSWORD
+        value: npg_N3MKug0mkzFD
+      - key: BROADCAST_DRIVER
+        value: log
+      - key: CACHE_DRIVER
+        value: file
+      - key: FILESYSTEM_DISK
+        value: local
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: SESSION_DRIVER
+        value: file
+      - key: SESSION_LIFETIME
+        value: 120
+      - key: MAIL_MAILER
+        value: log
+      - key: L5_SWAGGER_GENERATE_ALWAYS
+        value: true
+      - key: L5_SWAGGER_BASE_PATH
+        fromService:
+          type: web
+          name: laravel-api
+          property: host
+
+# Base de données Neon externe - pas besoin de créer une base sur Render

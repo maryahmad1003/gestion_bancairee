@@ -285,7 +285,34 @@ class ComptesBancairesController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * @OA\Get(
+     *     path="/api/v1/comptes/{compte_bancaire}",
+     *     summary="Récupérer un compte bancaire spécifique",
+     *     description="Permet de récupérer les informations détaillées d'un compte bancaire spécifique.",
+     *     operationId="getCompteBancaire",
+     *     tags={"Comptes Bancaires"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="compte_bancaire",
+     *         in="path",
+     *         required=true,
+     *         description="ID du compte bancaire",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Compte bancaire récupéré avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte bancaire récupéré avec succès"),
+     *             @OA\Property(property="data", ref="#/components/schemas/CompteBancaire"),
+     *             @OA\Property(property="timestamp", type="string", format="date-time")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Compte non trouvé"),
+     *     @OA\Response(response=403, description="Accès non autorisé"),
+     *     @OA\Response(response=500, description="Erreur serveur")
+     * )
      */
     public function show(CompteBancaire $compte_bancaire)
     {
@@ -296,7 +323,44 @@ class ComptesBancairesController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * @OA\Put(
+     *     path="/api/v1/comptes/{compte_bancaire}",
+     *     summary="Mettre à jour un compte bancaire",
+     *     description="Modifie les informations d'un compte bancaire existant. Tous les champs sont optionnels.",
+     *     operationId="updateCompteBancaire",
+     *     tags={"Comptes Bancaires"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="compte_bancaire",
+     *         in="path",
+     *         required=true,
+     *         description="ID du compte bancaire à modifier",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="type_compte", type="string", enum={"cheque", "epargne"}, example="cheque", description="Type de compte"),
+     *             @OA\Property(property="devise", type="string", example="EUR", description="Devise du compte"),
+     *             @OA\Property(property="decouvert_autorise", type="number", format="float", example=500.00, description="Découvert autorisé"),
+     *             @OA\Property(property="statut", type="string", enum={"actif", "inactif", "bloque"}, example="actif", description="Statut du compte")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Compte bancaire mis à jour avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte bancaire mis à jour avec succès"),
+     *             @OA\Property(property="data", ref="#/components/schemas/CompteBancaire"),
+     *             @OA\Property(property="timestamp", type="string", format="date-time")
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Données invalides"),
+     *     @OA\Response(response=404, description="Compte non trouvé"),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=500, description="Erreur serveur")
+     * )
      */
     public function update(UpdateCompteBancaireRequest $request, CompteBancaire $compte_bancaire)
     {
@@ -461,7 +525,34 @@ class ComptesBancairesController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * @OA\Delete(
+     *     path="/api/v1/comptes/{compte_bancaire}",
+     *     summary="Supprimer un compte bancaire",
+     *     description="Supprime un compte bancaire du système. Cette action est généralement effectuée en soft delete.",
+     *     operationId="deleteCompteBancaire",
+     *     tags={"Comptes Bancaires"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="compte_bancaire",
+     *         in="path",
+     *         required=true,
+     *         description="ID du compte bancaire à supprimer",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Compte bancaire supprimé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte bancaire supprimé avec succès"),
+     *             @OA\Property(property="timestamp", type="string", format="date-time")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Compte non trouvé"),
+     *     @OA\Response(response=403, description="Accès non autorisé"),
+     *     @OA\Response(response=400, description="Impossible de supprimer le compte (solde non nul)"),
+     *     @OA\Response(response=500, description="Erreur serveur")
+     * )
      */
     public function destroy(CompteBancaire $compte_bancaire)
     {
