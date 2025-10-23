@@ -12,7 +12,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Archiver les transactions tous les jours à minuit
+        $schedule->command('transactions:archiver')
+            ->dailyAt('00:00')
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**
