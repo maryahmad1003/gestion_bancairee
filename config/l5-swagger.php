@@ -97,23 +97,19 @@ return [
 
 
         'scanOptions' => [
-            /**
-             * Configuration for default processors. Allows to pass processors configuration to swagger-php.
-             *
-             * @link https://zircote.github.io/swagger-php/reference/processors.html
-             */
-            'default_processors_configuration' => [
-            /** Example */
-            /**
-             * 'operationId.hash' => true,
-             * 'pathFilter' => [
-             * 'tags' => [
-             * '/pets/',
-             * '/store/',
-             * ],
-             * ],.
-             */
+        /**
+         * Configuration for default processors. Allows to pass processors configuration to swagger-php.
+         *
+         * @link https://zircote.github.io/swagger-php/reference/processors.html
+         */
+        'default_processors_configuration' => [
+            'pathFilter' => [
+                'tags' => [
+                    '/Utilisateurs/',
+                    '/Comptes Bancaires/',
+                ],
             ],
+        ],
 
             /**
              * analyser: defaults to \OpenApi\StaticAnalyser .
