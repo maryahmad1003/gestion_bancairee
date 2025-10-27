@@ -28,7 +28,7 @@ return [
                 /*
                  * Edit to set the api's base path
                  */
-                'base' => env('L5_SWAGGER_BASE_PATH', 'https://gestion-bancairee-5.onrender.com'),
+                'base' => env('L5_SWAGGER_BASE_PATH', null),
                 /*
                  * Edit to include full URL in ui for assets
                  */

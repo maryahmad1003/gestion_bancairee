@@ -26,6 +26,11 @@ Route::get('/maryvonne/documentation', function () {
     $validatorUrl = config('l5-swagger.defaults.validator_url');
     $useAbsolutePath = config('l5-swagger.defaults.paths.use_absolute_path');
 
+    // Forcer l'URL HTTPS pour le déploiement
+    if (app()->environment('production')) {
+        $urlToDocs = str_replace('http://', 'https://', $urlToDocs);
+    }
+
     return view('vendor.l5-swagger.index', compact('documentation', 'urlToDocs', 'operationsSorter', 'configUrl', 'validatorUrl', 'useAbsolutePath'));
 });
 
