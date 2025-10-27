@@ -297,7 +297,7 @@ class ComptesBancairesController extends Controller
 
     /**
      * @OA\Put(
-     *     path="/api/v1/comptes/{compte_bancaire}",
+     *     path="/comptes/{compte_bancaire}",
      *     summary="Mettre à jour un compte bancaire",
      *     description="Modifie les informations d'un compte bancaire existant. Tous les champs sont optionnels.",
      *     operationId="updateCompteBancaire",
@@ -343,10 +343,15 @@ class ComptesBancairesController extends Controller
         // Pour les tests, on utilise une validation simple
         $validated = $request->validate([
             'type_compte' => 'sometimes|in:courant,epargne,joint',
-            'devise' => 'sometimes|string|size:3',
+            'devise' => 'sometimes|string|min:3|max:3',
             'decouvert_autorise' => 'sometimes|numeric|min:0',
             'statut' => 'sometimes|in:actif,inactif,bloque,ferme',
         ]);
+
+        // Filtrer les valeurs vides
+        $validated = array_filter($validated, function($value) {
+            return $value !== null && $value !== '';
+        });
 
         $compte_bancaire->update($validated);
 
