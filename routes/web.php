@@ -16,3 +16,16 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Route pour la documentation Swagger
+Route::get('/maryvonne/documentation', function () {
+    $documentation = 'default';
+    $urlToDocs = route('l5-swagger.'.$documentation.'.docs');
+    $operationsSorter = config('l5-swagger.defaults.operations_sort');
+    $configUrl = config('l5-swagger.defaults.additional_config_url');
+    $validatorUrl = config('l5-swagger.defaults.validator_url');
+    $useAbsolutePath = config('l5-swagger.defaults.paths.use_absolute_path');
+
+    return view('vendor.l5-swagger.index', compact('documentation', 'urlToDocs', 'operationsSorter', 'configUrl', 'validatorUrl', 'useAbsolutePath'));
+});
+

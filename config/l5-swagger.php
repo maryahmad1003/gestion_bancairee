@@ -5,14 +5,16 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'L5 Swagger UI',
+                'title' => 'Gestion Bancaire API',
+                'description' => 'API de gestion bancaire pour les opérations clients et comptes',
+                'version' => '1.0.0',
             ],
 
             'routes' => [
                 /*
                  * Route for accessing api documentation interface
                  */
-                'api' => 'api/documentation',
+                'api' => 'maryvonne/documentation',
             ],
             'paths' => [
                 /*
