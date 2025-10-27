@@ -1,28 +1,64 @@
-version: '3.8'
-
 services:
   app:
-    build: .
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: laravel-app
+    container_name: laravel-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    networks:
+      - laravel
     depends_on:
       - db
 
   db:
-    image: postgres:15-alpine
+    image: postgres:15
+    container_name: postgres-db-dev
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: laravel
-      POSTGRES_USER: laravel
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
+    POSTGRES_DB: ges_bbanc
+    POSTGRES_USER: maryahmad
+    POSTGRES_PASSWORD: Maryahmad13
+
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - laravel
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - laravel
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"  # au lieu de "8000:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - app
+    networks:
+      - laravel
 
 volumes:
-  postgres_data:
+  pgdata:
+
+networks:
+  laravel:
+    driver: bridge
+

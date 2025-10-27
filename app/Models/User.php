@@ -13,6 +13,7 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    protected $table = 'custom_users';
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -107,5 +108,42 @@ class User extends Authenticatable
     public function scopeAdmins($query)
     {
         return $query->where('role', 'admin');
+    }
+
+    /**
+     * Get the permissions for the user based on their role
+     */
+    public function getPermissionsAttribute()
+    {
+        return match($this->role) {
+            'admin' => [
+                'view_all_clients',
+                'manage_clients',
+                'view_all_accounts',
+                'manage_accounts',
+                'view_all_transactions',
+                'manage_transactions',
+                'archive_accounts',
+                'view_logs',
+                'manage_users',
+            ],
+            'manager' => [
+                'view_all_clients',
+                'manage_clients',
+                'view_all_accounts',
+                'manage_accounts',
+                'view_all_transactions',
+                'manage_transactions',
+                'archive_accounts',
+                'view_logs',
+            ],
+            'user' => [
+                'view_own_accounts',
+                'manage_own_accounts',
+                'view_own_transactions',
+                'create_transactions',
+            ],
+            default => []
+        };
     }
 }

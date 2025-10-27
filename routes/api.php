@@ -16,104 +16,30 @@ use Illuminate\Support\Facades\Route;
 
 // Versionnement des API
 Route::prefix('v1')->group(function () {
+    // Routes d'authentification (sans middleware auth)
+    Route::post('auth/login', [App\Http\Controllers\Api\V1\AuthController::class, 'login']);
+    Route::post('auth/refresh', [App\Http\Controllers\Api\V1\AuthController::class, 'refresh'])->middleware('auth:api');
+    Route::post('auth/logout', [App\Http\Controllers\Api\V1\AuthController::class, 'logout'])->middleware('auth:api');
+
     Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
         return $request->user();
     });
 
-    // Routes pour les comptes bancaires avec middleware personnalisé
-    Route::middleware(['auth:sanctum', 'throttle:api', 'App\Http\Middleware\RatingMiddleware'])
-        ->group(function () {
-            /**
-             * @OA\Get(
-             *     path="/api/v1/comptes",
-             *     summary="Récupérer la liste des comptes bancaires",
-             *     description="Permet à l'admin de récupérer tous les comptes ou au client de récupérer ses comptes. Liste uniquement les comptes non supprimés de type chèque ou épargne actifs.",
-             *     operationId="getComptes",
-             *     tags={"Comptes Bancaires"},
-             *     security={{"bearerAuth":{}}},
-             *     @OA\Parameter(
-             *         name="type_compte",
-             *         in="query",
-             *         description="Filtrer par type de compte (cheque, epargne)",
-             *         required=false,
-             *         @OA\Schema(type="string", enum={"cheque", "epargne"})
-             *     ),
-             *     @OA\Parameter(
-             *         name="archive",
-             *         in="query",
-             *         description="Récupérer les comptes épargne archivés depuis le cloud",
-             *         required=false,
-             *         @OA\Schema(type="boolean")
-             *     ),
-             *     @OA\Parameter(
-             *         name="telephone",
-             *         in="query",
-             *         description="Téléphone du client pour les comptes archivés",
-             *         required=false,
-             *         @OA\Schema(type="string")
-             *     ),
-             *     @OA\Response(
-             *         response=200,
-             *         description="Liste des comptes récupérée avec succès",
-             *         @OA\JsonContent(
-             *             @OA\Property(property="success", type="boolean", example=true),
-             *             @OA\Property(property="message", type="string"),
-             *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/CompteBancaire")),
-             *             @OA\Property(property="pagination", ref="#/components/schemas/Pagination"),
-             *             @OA\Property(property="timestamp", type="string", format="date-time")
-             *         )
-             *     ),
-             *     @OA\Response(response=403, description="Accès non autorisé"),
-             *     @OA\Response(response=500, description="Erreur serveur")
-             * )
-             */
-            /**
-             * @OA\Post(
-             *     path="/api/v1/comptes",
-             *     summary="Créer un compte bancaire avec client",
-             *     description="Crée un compte bancaire pour un client existant ou nouveau. Génère automatiquement numéro de compte, mot de passe et code. Envoie un email d'authentification et un SMS avec le code.",
-             *     operationId="createCompteBancaire",
-             *     tags={"Comptes Bancaires"},
-             *     security={{"bearerAuth":{}}},
-             *     @OA\RequestBody(
-             *         required=true,
-             *         @OA\JsonContent(
-             *             required={"nom", "prenom", "email", "telephone", "date_naissance"},
-             *             @OA\Property(property="nom", type="string", example="Dupont", description="Nom du client"),
-             *             @OA\Property(property="prenom", type="string", example="Jean", description="Prénom du client"),
-             *             @OA\Property(property="email", type="string", format="email", example="jean.dupont@email.com", description="Email unique du client"),
-             *             @OA\Property(property="telephone", type="string", example="+221771234567", description="Numéro de téléphone sénégalais valide"),
-             *             @OA\Property(property="date_naissance", type="string", format="date", example="1990-01-01", description="Date de naissance"),
-             *             @OA\Property(property="adresse", type="string", example="123 Rue de la Paix", description="Adresse du client"),
-             *             @OA\Property(property="ville", type="string", example="Paris", description="Ville"),
-             *             @OA\Property(property="code_postal", type="string", example="75001", description="Code postal"),
-             *             @OA\Property(property="pays", type="string", example="France", description="Pays"),
-             *             @OA\Property(property="type_compte", type="string", enum={"courant", "epargne"}, example="courant", description="Type de compte"),
-             *             @OA\Property(property="devise", type="string", example="EUR", description="Devise du compte"),
-             *             @OA\Property(property="decouvert_autorise", type="number", format="float", example=500.00, description="Découvert autorisé")
-             *         )
-             *     ),
-             *     @OA\Response(
-             *         response=201,
-             *         description="Compte bancaire créé avec succès",
-             *         @OA\JsonContent(
-             *             @OA\Property(property="success", type="boolean", example=true),
-             *             @OA\Property(property="message", type="string", example="Compte bancaire créé avec succès. Notifications envoyées."),
-             *             @OA\Property(property="data", ref="#/components/schemas/CompteBancaire"),
-             *             @OA\Property(property="timestamp", type="string", format="date-time")
-             *         )
-             *     ),
-             *     @OA\Response(response=400, description="Données invalides"),
-             *     @OA\Response(response=422, description="Erreur de validation - numéro de téléphone invalide ou email déjà utilisé"),
-             *     @OA\Response(response=500, description="Erreur serveur")
-             * )
-             */
+    // Routes pour les comptes bancaires SANS authentification pour les tests
+    Route::group([], function () {
             Route::get('comptes', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'index']);
             Route::post('comptes', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'store']);
+            Route::get('comptes/{id}', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'show'])->where('id', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}');
+            Route::put('comptes/{id}', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'update'])->where('id', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}');
+            Route::delete('comptes/{id}', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'destroy'])->where('id', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}');
 
             // Routes spécifiques pour le blocage des comptes épargne
-            Route::post('comptes/{compte_bancaire}/bloquer', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'bloquer']);
-            Route::post('comptes/{compte_bancaire}/debloquer', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'debloquer']);
+            Route::post('comptes/{id}/bloquer', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'bloquer'])->where('id', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}');
+            Route::post('comptes/{id}/debloquer', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'debloquer'])->where('id', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}');
+
+            // Routes pour l'archivage des comptes
+            Route::post('comptes/{id}/archiver', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'archiver'])->where('id', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}');
+            Route::post('comptes/{id}/desarchiver', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'desarchiver'])->where('id', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}');
         });
 
     // Routes pour les clients avec middleware personnalisé
@@ -132,7 +58,8 @@ Route::prefix('v1')->group(function () {
 
     // Exemples de routes suivant les conventions
     // Utiliser des noms au pluriel, minuscules avec tirets
-    Route::apiResource('comptes-bancaires', 'App\Http\Controllers\Api\V1\ComptesBancairesController');
+    // Route::apiResource('comptes-bancaires', 'App\Http\Controllers\Api\V1\ComptesBancairesController');
     Route::apiResource('transactions', 'App\Http\Controllers\Api\V1\TransactionsController');
     Route::apiResource('clients', 'App\Http\Controllers\Api\V1\ClientsController');
 });
+

@@ -13,12 +13,12 @@ namespace App\Swagger;
  *         ),
  *     ),
  *     @OA\Server(
- *         url="https://laravel-banking-api.onrender.com/api/v1",
- *         description="Serveur de production"
- *     ),
- *     @OA\Server(
  *         url="http://localhost:8000/api/v1",
  *         description="Serveur de développement"
+ *     ),
+ *     @OA\Server(
+ *         url="https://laravel-banking-api.onrender.com/api/v1",
+ *         description="Serveur de production"
  *     ),
  *     @OA\Tag(
  *         name="Clients",

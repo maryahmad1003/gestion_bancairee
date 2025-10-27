@@ -21,11 +21,12 @@ class CompteBancaireFactory extends Factory
             'client_id' => \App\Models\Client::factory(),
             'type_compte' => $this->faker->randomElement(['courant', 'epargne', 'joint']),
             'devise' => $this->faker->randomElement(['EUR', 'USD', 'GBP']),
-            'solde' => $this->faker->randomFloat(2, -5000, 50000),
             'decouvert_autorise' => $this->faker->randomFloat(2, 0, 2000),
             'date_ouverture' => $this->faker->dateTimeBetween('-10 years', 'now'),
             'statut' => $this->faker->randomElement(['actif', 'bloque', 'ferme']),
             'commentaires' => $this->faker->optional(0.3)->sentence(),
+            'est_bloque' => false,
+            'est_archive' => false,
         ];
     }
 

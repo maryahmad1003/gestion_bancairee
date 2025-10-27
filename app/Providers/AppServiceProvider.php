@@ -31,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Configurer Passport pour utiliser les cookies
+        \Laravel\Passport\Passport::cookie('token');
     }
 }

@@ -50,75 +50,7 @@ class ClientSeeder extends Seeder
             'statut' => 'suspendu',
         ]);
 
-        // Créer des utilisateurs pour l'authentification
-        $this->createUsers();
+        // Les utilisateurs sont maintenant créés dans CustomUserSeeder
     }
 
-    /**
-     * Créer des utilisateurs de test avec différents rôles
-     */
-    private function createUsers(): void
-    {
-        // Administrateur
-        \App\Models\User::create([
-            'name' => 'Admin Banque',
-            'email' => 'admin@banque.example.com',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-            'permissions' => json_encode([
-                'manage_clients',
-                'manage_accounts',
-                'manage_transactions',
-                'block_accounts',
-                'view_reports',
-                'manage_users'
-            ]),
-        ]);
-
-        // Client 1
-        \App\Models\User::create([
-            'name' => 'Jean Dupont',
-            'email' => 'jean.dupont@test.com',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-            'role' => 'client',
-            'client_id' => 'CLI-TEST001',
-            'permissions' => json_encode([
-                'view_own_accounts',
-                'view_own_transactions',
-                'create_transactions'
-            ]),
-        ]);
-
-        // Client 2
-        \App\Models\User::create([
-            'name' => 'Marie Martin',
-            'email' => 'marie.martin@test.com',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-            'role' => 'client',
-            'client_id' => 'CLI-TEST002',
-            'permissions' => json_encode([
-                'view_own_accounts',
-                'view_own_transactions',
-                'create_transactions'
-            ]),
-        ]);
-
-        // Gestionnaire
-        \App\Models\User::create([
-            'name' => 'Gestionnaire Compte',
-            'email' => 'gestionnaire@banque.example.com',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-            'role' => 'gestionnaire',
-            'permissions' => json_encode([
-                'manage_clients',
-                'manage_accounts',
-                'view_reports',
-                'block_accounts'
-            ]),
-        ]);
-    }
 }

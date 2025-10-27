@@ -12,7 +12,7 @@ return [
                 /*
                  * Route for accessing api documentation interface
                  */
-                'api' => 'maryvonne/documentation',
+                'api' => 'api/documentation',
             ],
             'paths' => [
                 /*
@@ -161,65 +161,41 @@ return [
         */
         'securityDefinitions' => [
             'securitySchemes' => [
-                /*
-                 * Examples of Security schemes
-                 */
-                /*
-                'api_key_security_example' => [ // Unique name of security
-                    'type' => 'apiKey', // The type of the security scheme. Valid values are "basic", "apiKey" or "oauth2".
-                    'description' => 'A short description for security scheme',
-                    'name' => 'api_key', // The name of the header or query parameter to be used.
-                    'in' => 'header', // The location of the API key. Valid values are "query" or "header".
-                ],
-                'oauth2_security_example' => [ // Unique name of security
-                    'type' => 'oauth2', // The type of the security scheme. Valid values are "basic", "apiKey" or "oauth2".
-                    'description' => 'A short description for oauth2 security scheme.',
-                    'flow' => 'implicit', // The flow used by the OAuth2 security scheme. Valid values are "implicit", "password", "application" or "accessCode".
-                    'authorizationUrl' => 'http://example.com/auth', // The authorization URL to be used for (implicit/accessCode)
-                    //'tokenUrl' => 'http://example.com/auth' // The authorization URL to be used for (password/application/accessCode)
-                    'scopes' => [
-                        'read:projects' => 'read your projects',
-                        'write:projects' => 'modify projects in your account',
-                    ]
-                ],
-                */
-
-                /* Open API 3.0 support
-                'passport' => [ // Unique name of security
-                    'type' => 'oauth2', // The type of the security scheme. Valid values are "basic", "apiKey" or "oauth2".
-                    'description' => 'Laravel passport oauth2 security.',
-                    'in' => 'header',
-                    'scheme' => 'https',
-                    'flows' => [
-                        "password" => [
-                            "authorizationUrl" => config('app.url') . '/oauth/authorize',
-                            "tokenUrl" => config('app.url') . '/oauth/token',
-                            "refreshUrl" => config('app.url') . '/token/refresh',
-                            "scopes" => []
-                        ],
-                    ],
-                ],
-                'bearerAuth' => [ // Unique name of security
-                    'type' => 'http', // Valid values are "basic", "apiKey" or "oauth2".
+                'bearerAuth' => [
+                    'type' => 'http',
                     'scheme' => 'bearer',
                     'bearerFormat' => 'JWT',
                     'description' => 'Enter token in format (Bearer <token>)',
                 ],
-                */
+                'passport' => [
+                    'type' => 'oauth2',
+                    'description' => 'Laravel Passport OAuth2 Security',
+                    'flows' => [
+                        'password' => [
+                            'tokenUrl' => config('app.url') . '/api/v1/auth/login',
+                            'refreshUrl' => config('app.url') . '/api/v1/auth/refresh',
+                            'scopes' => [
+                                'view_all_clients' => 'Voir tous les clients',
+                                'manage_clients' => 'Gérer les clients',
+                                'view_all_accounts' => 'Voir tous les comptes',
+                                'manage_accounts' => 'Gérer les comptes',
+                                'view_all_transactions' => 'Voir toutes les transactions',
+                                'manage_transactions' => 'Gérer les transactions',
+                                'archive_accounts' => 'Archiver les comptes',
+                                'view_logs' => 'Voir les logs',
+                                'manage_users' => 'Gérer les utilisateurs',
+                                'view_own_accounts' => 'Voir ses propres comptes',
+                                'manage_own_accounts' => 'Gérer ses propres comptes',
+                                'view_own_transactions' => 'Voir ses propres transactions',
+                                'create_transactions' => 'Créer des transactions',
+                            ],
+                        ],
+                    ],
+                ],
             ],
             'security' => [
-                /*
-                 * Examples of Securities
-                 */
                 [
-                    /*
-                    'oauth2_security_example' => [
-                        'read',
-                        'write'
-                    ],
-
-                    'passport' => []
-                    */
+                    'bearerAuth' => [],
                 ],
             ],
         ],

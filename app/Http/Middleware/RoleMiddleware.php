@@ -2,12 +2,15 @@
 
 namespace App\Http\Middleware;
 
+use App\Traits\ApiResponseTrait;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {
+    use ApiResponseTrait;
     /**
      * Handle an incoming request.
      *
@@ -32,7 +35,7 @@ class RoleMiddleware
         // Vérifier les permissions spécifiques si nécessaire
         if ($request->has('required_permissions')) {
             $requiredPermissions = $request->required_permissions;
-            $userPermissions = json_decode($user->permissions, true) ?? [];
+            $userPermissions = $user->permissions ?? [];
 
             $hasPermission = false;
             foreach ($requiredPermissions as $permission) {
