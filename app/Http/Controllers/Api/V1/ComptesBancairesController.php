@@ -528,7 +528,12 @@ class ComptesBancairesController extends Controller
                  }
 
                  if (!empty($clientData)) {
-                     $client->update($clientData);
+                     try {
+                         $client->update($clientData);
+                     } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                         // Gérer l'erreur de contrainte unique sur l'email
+                         return $this->errorResponse('L\'email fourni est déjà utilisé par un autre client.', 422);
+                     }
                  }
              }
 

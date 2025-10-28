@@ -22,8 +22,8 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/logout', [App\Http\Controllers\Api\V1\AuthController::class, 'logout'])->middleware('auth:api');
 
 
-    // Routes pour les comptes bancaires SANS authentification pour les tests
-    Route::group([], function () {
+    // Routes pour les comptes bancaires AVEC authentification en production
+    Route::middleware(['auth:api'])->group(function () {
             Route::get('comptes', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'index']);
             Route::post('comptes', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'store']);
             Route::get('comptes/{id}', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'show'])->where('id', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}');
