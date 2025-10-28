@@ -38,6 +38,7 @@ class TransactionFactory extends Factory
                 'ip_source' => $this->faker->ipv4(),
                 'user_agent' => $this->faker->userAgent(),
             ]),
+            'id' => $this->faker->uuid(),
         ];
     }
 

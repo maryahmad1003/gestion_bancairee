@@ -24,12 +24,22 @@ class ApiHeadersMiddleware
             $requiredHeaders['Content-Type'] = 'application/json';
         }
 
+        // Pour les routes DELETE, exiger Content-Type si nécessaire
+        if ($request->method() === 'DELETE') {
+            $requiredHeaders['Content-Type'] = 'application/json';
+        }
+
         $requiredHeaders['Accept'] = 'application/json';
 
         // Pour les routes d'authentification, ne pas exiger Authorization
         // Pour les tests, on désactive aussi Authorization pour les comptes
         if (!$request->is('api/v1/auth/*') && !$request->is('api/v1/comptes*')) {
             $requiredHeaders['Authorization'] = 'Bearer {jwt_token}';
+        }
+
+        // Pour les routes de débocage/déblocage, ne pas exiger Content-Type
+        if ($request->is('api/v1/comptes/*/debloquer') || $request->is('api/v1/comptes/*/desarchiver')) {
+            unset($requiredHeaders['Content-Type']);
         }
 
         foreach ($requiredHeaders as $header => $expected) {

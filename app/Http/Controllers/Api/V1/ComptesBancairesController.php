@@ -365,7 +365,7 @@ class ComptesBancairesController extends Controller
      * Bloquer un compte épargne
      *
      * @OA\Post(
-     *     path="/api/v1/comptes/{compte_bancaire}/bloquer",
+     *     path="/comptes/{compte_bancaire}/bloquer",
      *     summary="Bloquer un compte épargne",
      *     description="Bloque un compte épargne actif pour une durée déterminée. Seuls les comptes épargne actifs peuvent être bloqués.",
      *     operationId="bloquerCompteEpargne",
@@ -421,7 +421,7 @@ class ComptesBancairesController extends Controller
             return $this->errorResponse('Le compte doit être actif pour être bloqué.', 400);
         }
 
-        if ($compte_bancaire->est_bloque) {
+        if ($compte_bancaire->getEstBloqueAttribute()) {
             return $this->errorResponse('Le compte est déjà bloqué.', 400);
         }
 
@@ -457,7 +457,7 @@ class ComptesBancairesController extends Controller
      * Débloquer un compte épargne
      *
      * @OA\Post(
-     *     path="/api/v1/comptes/{compte_bancaire}/debloquer",
+     *     path="/comptes/{compte_bancaire}/debloquer",
      *     summary="Débloquer un compte épargne",
      *     description="Débloque un compte épargne qui était bloqué.",
      *     operationId="debloquerCompteEpargne",
@@ -490,7 +490,7 @@ class ComptesBancairesController extends Controller
         // Pour les tests, on utilise l'ID directement
         $compte_bancaire = CompteBancaire::findOrFail($id);
 
-        if (!$compte_bancaire->est_bloque) {
+        if (!$compte_bancaire->getEstBloqueAttribute()) {
             return $this->errorResponse('Le compte n\'est pas bloqué.', 400);
         }
 
@@ -523,7 +523,7 @@ class ComptesBancairesController extends Controller
      * Archiver un compte bancaire
      *
      * @OA\Post(
-     *     path="/api/v1/comptes/{compte_bancaire}/archiver",
+     *     path="/comptes/{compte_bancaire}/archiver",
      *     summary="Archiver un compte bancaire",
      *     description="Archive un compte bancaire. Seuls les comptes actifs peuvent être archivés.",
      *     operationId="archiverCompteBancaire",
@@ -614,7 +614,7 @@ class ComptesBancairesController extends Controller
      * Désarchiver un compte bancaire
      *
      * @OA\Post(
-     *     path="/api/v1/comptes/{compte_bancaire}/desarchiver",
+     *     path="/comptes/{compte_bancaire}/desarchiver",
      *     summary="Désarchiver un compte bancaire",
      *     description="Désarchive un compte bancaire archivé.",
      *     operationId="desarchiverCompteBancaire",
@@ -678,7 +678,7 @@ class ComptesBancairesController extends Controller
 
     /**
      * @OA\Delete(
-     *     path="/api/v1/comptes/{compte_bancaire}",
+     *     path="/comptes/{compte_bancaire}",
      *     summary="Supprimer un compte bancaire",
      *     description="Supprime un compte bancaire du système. Cette action est généralement effectuée en soft delete.",
      *     operationId="deleteCompteBancaire",

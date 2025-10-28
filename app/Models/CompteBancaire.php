@@ -33,7 +33,8 @@ class CompteBancaire extends Model
         'date_fin_blocage',
         'motif_blocage',
         'est_archive',
-        'date_archivage'
+        'date_archivage',
+        'motif_archivage'
     ];
 
     protected $casts = [
@@ -42,6 +43,7 @@ class CompteBancaire extends Model
         'date_debut_blocage' => 'datetime',
         'date_fin_blocage' => 'datetime',
         'date_archivage' => 'datetime',
+        'motif_archivage' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'est_bloque' => 'boolean',
@@ -137,12 +139,12 @@ class CompteBancaire extends Model
 
     public function getEstBloqueAttribute(): bool
     {
-        return $this->est_bloque && $this->date_fin_blocage && now()->lessThanOrEqualTo($this->date_fin_blocage);
+        return $this->attributes['est_bloque'] && $this->date_fin_blocage && now()->lessThanOrEqualTo($this->date_fin_blocage);
     }
 
     public function getPeutEtreBloqueAttribute(): bool
     {
-        return $this->type_compte === 'epargne' && $this->statut === 'actif' && !$this->est_bloque;
+        return $this->type_compte === 'epargne' && $this->statut === 'actif' && !$this->attributes['est_bloque'];
     }
 
     // Scopes
@@ -199,7 +201,7 @@ class CompteBancaire extends Model
      */
     public function bloquer(int $dureeJours, ?string $motif = null): bool
     {
-        if (!$this->peut_etre_bloque) {
+        if (!$this->getPeutEtreBloqueAttribute()) {
             return false;
         }
 
@@ -219,7 +221,7 @@ class CompteBancaire extends Model
      */
     public function debloquer(): bool
     {
-        if (!$this->est_bloque) {
+        if (!$this->getEstBloqueAttribute()) {
             return false;
         }
 
@@ -237,21 +239,28 @@ class CompteBancaire extends Model
     /**
      * Archiver un compte et ses transactions
      */
-    public function archiver(): bool
+    public function archiver(?string $motif = null): bool
     {
-        if ($this->est_archive) {
+        if ($this->attributes['est_archive']) {
             return false;
         }
 
-        DB::transaction(function () {
+        DB::transaction(function () use ($motif) {
             // Archiver le compte
             $this->update([
                 'est_archive' => true,
                 'date_archivage' => now(),
+                'motif_archivage' => $motif,
             ]);
 
             // Archiver toutes les transactions du compte
             $this->transactions()->update([
+                'est_archive' => true,
+                'date_archivage' => now(),
+            ]);
+
+            // Archiver les transactions émises
+            $this->transactionsEmises()->update([
                 'est_archive' => true,
                 'date_archivage' => now(),
             ]);
@@ -265,7 +274,7 @@ class CompteBancaire extends Model
      */
     public function desarchiver(): bool
     {
-        if (!$this->est_archive) {
+        if (!$this->attributes['est_archive']) {
             return false;
         }
 
@@ -274,10 +283,17 @@ class CompteBancaire extends Model
             $this->update([
                 'est_archive' => false,
                 'date_archivage' => null,
+                'motif_archivage' => null,
             ]);
 
             // Désarchiver toutes les transactions du compte
             $this->transactions()->update([
+                'est_archive' => false,
+                'date_archivage' => null,
+            ]);
+
+            // Désarchiver les transactions émises
+            $this->transactionsEmises()->update([
                 'est_archive' => false,
                 'date_archivage' => null,
             ]);

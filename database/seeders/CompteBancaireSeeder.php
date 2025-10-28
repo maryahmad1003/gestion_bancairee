@@ -32,8 +32,7 @@ class CompteBancaireSeeder extends Seeder
             \App\Models\CompteBancaire::factory()->create([
                 'numero_compte' => 'CB-TEST001',
                 'client_id' => $clientTest1->id,
-                'type_compte' => 'courant',
-                'solde' => 2500.50,
+                'type_compte' => 'cheque',
                 'statut' => 'actif',
             ]);
 
@@ -41,7 +40,6 @@ class CompteBancaireSeeder extends Seeder
                 'numero_compte' => 'CB-TEST002',
                 'client_id' => $clientTest1->id,
                 'type_compte' => 'epargne',
-                'solde' => 15000.00,
                 'statut' => 'actif',
             ]);
         }
@@ -51,8 +49,7 @@ class CompteBancaireSeeder extends Seeder
             \App\Models\CompteBancaire::factory()->create([
                 'numero_compte' => 'CB-TEST003',
                 'client_id' => $clientTest2->id,
-                'type_compte' => 'courant',
-                'solde' => -150.25,
+                'type_compte' => 'cheque',
                 'statut' => 'actif',
             ]);
         }

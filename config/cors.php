@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PATCH', 'DELETE'],
 
-    'allowed_origins' => ['http://front.banque.example.com', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 

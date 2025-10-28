@@ -19,7 +19,7 @@ class CompteBancaireFactory extends Factory
         return [
             'numero_compte' => 'CB-' . $this->faker->unique()->regexify('[A-Z0-9]{10}'),
             'client_id' => \App\Models\Client::factory(),
-            'type_compte' => $this->faker->randomElement(['courant', 'epargne', 'joint']),
+            'type_compte' => $this->faker->randomElement(['cheque', 'epargne']),
             'devise' => $this->faker->randomElement(['EUR', 'USD', 'GBP']),
             'decouvert_autorise' => $this->faker->randomFloat(2, 0, 2000),
             'date_ouverture' => $this->faker->dateTimeBetween('-10 years', 'now'),
@@ -39,11 +39,11 @@ class CompteBancaireFactory extends Factory
         });
     }
 
-    public function courant()
+    public function cheque()
     {
         return $this->state(function (array $attributes) {
             return [
-                'type_compte' => 'courant',
+                'type_compte' => 'cheque',
             ];
         });
     }
@@ -61,7 +61,7 @@ class CompteBancaireFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'solde' => $this->faker->randomFloat(2, 100, 50000),
+                // Solde calculé dynamiquement, pas besoin de le définir ici
             ];
         });
     }

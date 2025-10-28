@@ -18,48 +18,7 @@ class TransactionsController extends Controller
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/v1/transactions",
-     *     summary="Récupérer la liste des transactions",
-     *     description="Permet de récupérer les transactions d'un client ou d'un admin. Les transactions peuvent être filtrées par date ou récupérées depuis l'archive cloud.",
-     *     operationId="getTransactions",
-     *     tags={"Transactions"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="date_debut",
-     *         in="query",
-     *         description="Date de début pour le filtrage (YYYY-MM-DD)",
-     *         required=false,
-     *         @OA\Schema(type="string", format="date")
-     *     ),
-     *     @OA\Parameter(
-     *         name="date_fin",
-     *         in="query",
-     *         description="Date de fin pour le filtrage (YYYY-MM-DD)",
-     *         required=false,
-     *         @OA\Schema(type="string", format="date")
-     *     ),
-     *     @OA\Parameter(
-     *         name="compte_bancaire_id",
-     *         in="query",
-     *         description="ID du compte bancaire pour filtrer les transactions",
-     *         required=false,
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Liste des transactions récupérée avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Transaction")),
-     *             @OA\Property(property="pagination", ref="#/components/schemas/Pagination"),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
-     *         )
-     *     ),
-     *     @OA\Response(response=403, description="Accès non autorisé"),
-     *     @OA\Response(response=500, description="Erreur serveur")
-     * )
+     * Récupérer la liste des transactions (sans annotations Swagger)
      */
     public function index(Request $request)
     {
@@ -104,41 +63,7 @@ class TransactionsController extends Controller
     }
 
     /**
-     * @OA\Post(
-     *     path="/api/v1/transactions",
-     *     summary="Créer une nouvelle transaction",
-     *     description="Crée une nouvelle transaction (dépôt, retrait ou virement). L'observer de transaction gère automatiquement les vérifications de solde et les mises à jour.",
-     *     operationId="createTransaction",
-     *     tags={"Transactions"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"montant", "type_transaction", "libelle", "compte_bancaire_id"},
-     *             @OA\Property(property="montant", type="number", format="float", example=100.50, description="Montant de la transaction"),
-     *             @OA\Property(property="type_transaction", type="string", enum={"debit", "credit", "virement_emis", "virement_recu"}, example="debit", description="Type de transaction"),
-     *             @OA\Property(property="libelle", type="string", example="Paiement facture EDF", description="Libellé de la transaction"),
-     *             @OA\Property(property="description", type="string", example="Paiement de la facture d'électricité", description="Description détaillée"),
-     *             @OA\Property(property="compte_bancaire_id", type="string", format="uuid", description="ID du compte bancaire source"),
-     *             @OA\Property(property="compte_bancaire_destinataire_id", type="string", format="uuid", description="ID du compte bancaire destinataire (pour virements)"),
-     *             @OA\Property(property="devise", type="string", example="EUR", description="Devise de la transaction")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Transaction créée avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Transaction créée avec succès"),
-     *             @OA\Property(property="data", ref="#/components/schemas/Transaction"),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
-     *         )
-     *     ),
-     *     @OA\Response(response=400, description="Données invalides"),
-     *     @OA\Response(response=422, description="Erreur de validation"),
-     *     @OA\Response(response=403, description="Solde insuffisant ou accès non autorisé"),
-     *     @OA\Response(response=500, description="Erreur serveur")
-     * )
+     * Créer une nouvelle transaction (sans annotations Swagger)
      */
     public function store(Request $request)
     {
@@ -166,34 +91,7 @@ class TransactionsController extends Controller
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/v1/transactions/{id}",
-     *     summary="Récupérer une transaction spécifique",
-     *     description="Permet de récupérer les informations détaillées d'une transaction spécifique.",
-     *     operationId="getTransaction",
-     *     tags={"Transactions"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID de la transaction",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Transaction récupérée avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Transaction récupérée avec succès"),
-     *             @OA\Property(property="data", ref="#/components/schemas/Transaction"),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
-     *         )
-     *     ),
-     *     @OA\Response(response=404, description="Transaction non trouvée"),
-     *     @OA\Response(response=403, description="Accès non autorisé"),
-     *     @OA\Response(response=500, description="Erreur serveur")
-     * )
+     * Récupérer une transaction spécifique (sans annotations Swagger)
      */
     public function show(string $id)
     {
@@ -212,41 +110,7 @@ class TransactionsController extends Controller
     }
 
     /**
-     * @OA\Put(
-     *     path="/api/v1/transactions/{id}",
-     *     summary="Mettre à jour une transaction",
-     *     description="Modifie les informations d'une transaction existante. Généralement limité à la description.",
-     *     operationId="updateTransaction",
-     *     tags={"Transactions"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID de la transaction à modifier",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="description", type="string", example="Paiement facture EDF mise à jour", description="Nouvelle description de la transaction")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Transaction mise à jour avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Transaction mise à jour avec succès"),
-     *             @OA\Property(property="data", ref="#/components/schemas/Transaction"),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
-     *         )
-     *     ),
-     *     @OA\Response(response=400, description="Données invalides"),
-     *     @OA\Response(response=404, description="Transaction non trouvée"),
-     *     @OA\Response(response=403, description="Accès non autorisé"),
-     *     @OA\Response(response=500, description="Erreur serveur")
-     * )
+     * Mettre à jour une transaction (sans annotations Swagger)
      */
     public function update(Request $request, string $id)
     {
@@ -270,33 +134,7 @@ class TransactionsController extends Controller
     }
 
     /**
-     * @OA\Delete(
-     *     path="/api/v1/transactions/{id}",
-     *     summary="Supprimer une transaction",
-     *     description="Supprime une transaction du système. Cette action est généralement réservée aux administrateurs.",
-     *     operationId="deleteTransaction",
-     *     tags={"Transactions"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID de la transaction à supprimer",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Transaction supprimée avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Transaction supprimée avec succès"),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
-     *         )
-     *     ),
-     *     @OA\Response(response=404, description="Transaction non trouvée"),
-     *     @OA\Response(response=403, description="Accès non autorisé"),
-     *     @OA\Response(response=500, description="Erreur serveur")
-     * )
+     * Supprimer une transaction (sans annotations Swagger)
      */
     public function destroy(string $id)
     {

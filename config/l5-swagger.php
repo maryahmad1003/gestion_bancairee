@@ -105,12 +105,12 @@ return [
          * @link https://zircote.github.io/swagger-php/reference/processors.html
          */
         'default_processors_configuration' => [
-            'pathFilter' => [
-                'tags' => [
-                    '/Utilisateurs/',
-                    '/Comptes Bancaires/',
-                ],
-            ],
+            // 'pathFilter' => [
+            //     'tags' => [
+            //         '/Utilisateurs/',
+            //         '/Comptes Bancaires/',
+            //     ],
+            // ],
         ],
 
             /**

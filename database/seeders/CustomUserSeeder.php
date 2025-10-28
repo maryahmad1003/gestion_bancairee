@@ -42,11 +42,11 @@ class CustomUserSeeder extends Seeder
             'password' => Hash::make('password'),
         ]);
 
-        // Créer des utilisateurs standards
+        // Créer des utilisateurs standards sénégalais
         \App\Models\User::factory()->create([
             'numero_user' => 'USR-USER001',
-            'name' => 'Jean Dupont',
-            'email' => 'jean.dupont@banque.com',
+            'name' => 'Mary Vonne',
+            'email' => 'mary.vonne@banque.com',
             'role' => 'user',
             'statut' => 'actif',
             'password' => Hash::make('password'),
@@ -54,25 +54,82 @@ class CustomUserSeeder extends Seeder
 
         \App\Models\User::factory()->create([
             'numero_user' => 'USR-USER002',
-            'name' => 'Sophie Bernard',
-            'email' => 'sophie.bernard@banque.com',
+            'name' => 'Ahmad Diallo',
+            'email' => 'ahmad.diallo@banque.com',
             'role' => 'user',
             'statut' => 'actif',
             'password' => Hash::make('password'),
         ]);
 
-        // Créer quelques utilisateurs inactifs pour les tests
         \App\Models\User::factory()->create([
-            'numero_user' => 'USR-INACT001',
-            'name' => 'Paul Durand',
-            'email' => 'paul.durand@banque.com',
+            'numero_user' => 'USR-USER003',
+            'name' => 'Roi Pere',
+            'email' => 'roi.pere@banque.com',
             'role' => 'user',
-            'statut' => 'inactif',
+            'statut' => 'actif',
             'password' => Hash::make('password'),
         ]);
 
-        // Créer des utilisateurs supplémentaires aléatoires
-        \App\Models\User::factory(10)->create([
+        \App\Models\User::factory()->create([
+            'numero_user' => 'USR-USER004',
+            'name' => 'Reine Mere',
+            'email' => 'reine.mere@banque.com',
+            'role' => 'user',
+            'statut' => 'actif',
+            'password' => Hash::make('password'),
+        ]);
+
+        \App\Models\User::factory()->create([
+            'numero_user' => 'USR-USER005',
+            'name' => 'Fatou',
+            'email' => 'fatou@banque.com',
+            'role' => 'user',
+            'statut' => 'actif',
+            'password' => Hash::make('password'),
+        ]);
+
+        \App\Models\User::factory()->create([
+            'numero_user' => 'USR-USER006',
+            'name' => 'Dieynaba',
+            'email' => 'dieynaba@banque.com',
+            'role' => 'user',
+            'statut' => 'actif',
+            'password' => Hash::make('password'),
+        ]);
+
+        \App\Models\User::factory()->create([
+            'numero_user' => 'USR-USER007',
+            'name' => 'Bobo Tijani',
+            'email' => 'bobo.tijani@banque.com',
+            'role' => 'user',
+            'statut' => 'actif',
+            'password' => Hash::make('password'),
+        ]);
+
+        \App\Models\User::factory()->create([
+            'numero_user' => 'USR-USER008',
+            'name' => 'Baye Ala Mine',
+            'email' => 'baye.ala.mine@banque.com',
+            'role' => 'user',
+            'statut' => 'actif',
+            'password' => Hash::make('password'),
+        ]);
+
+        \App\Models\User::factory()->create([
+            'numero_user' => 'USR-USER009',
+            'name' => 'Baye Amadou',
+            'email' => 'baye.amadou@banque.com',
+            'role' => 'user',
+            'statut' => 'actif',
+            'password' => Hash::make('password'),
+        ]);
+
+        \App\Models\User::factory()->create([
+            'numero_user' => 'USR-USER010',
+            'name' => 'Daba Ngom',
+            'email' => 'daba.ngom@banque.com',
+            'role' => 'user',
+            'statut' => 'actif',
             'password' => Hash::make('password'),
         ]);
     }
