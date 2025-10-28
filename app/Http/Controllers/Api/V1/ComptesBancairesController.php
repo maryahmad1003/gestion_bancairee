@@ -43,10 +43,21 @@ class ComptesBancairesController extends Controller
      *         description="Liste des comptes récupérée avec succès",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/CompteBancaire")),
-     *             @OA\Property(property="pagination", ref="#/components/schemas/Pagination"),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
+     *             @OA\Property(property="data", type="array", @OA\Items(
+     *                 @OA\Property(property="id", type="string", format="uuid", example="3f0638fa-6e5a-4bfe-afbd-7feb128cbb5a"),
+     *                 @OA\Property(property="numeroCompte", type="string", example="CB-QC5BOGAU2G"),
+     *                 @OA\Property(property="titulaire", type="string", example="Toy Little"),
+     *                 @OA\Property(property="type", type="string", example="cheque"),
+     *                 @OA\Property(property="solde", type="integer", example=0),
+     *                 @OA\Property(property="devise", type="string", example="XOF"),
+     *                 @OA\Property(property="dateCreation", type="string", format="date-time", example="2025-05-04T00:00:00.000000Z"),
+     *                 @OA\Property(property="statut", type="string", example="actif"),
+     *                 @OA\Property(property="motifBlocage", type="string", nullable=true, example=null),
+     *                 @OA\Property(property="metadata", type="object",
+     *                     @OA\Property(property="derniereModification", type="string", format="date-time", example="2025-10-28T12:02:34.000000Z"),
+     *                     @OA\Property(property="version", type="integer", example=1)
+     *                 )
+     *             ))
      *         )
      *     ),
      *     @OA\Response(response=403, description="Accès non autorisé"),
