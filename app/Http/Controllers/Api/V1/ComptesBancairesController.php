@@ -128,7 +128,7 @@ class ComptesBancairesController extends Controller
                 'numeroCompte' => $compte->numero_compte,
                 'titulaire' => $compte->client->nom_complet,
                 'type' => $compte->type_compte,
-                'solde' => $compte->solde ?? 0,
+                'solde' => (int) $compte->solde,
                 'devise' => $compte->devise,
                 'dateCreation' => $compte->date_ouverture->toISOString(),
                 'statut' => $compte->statut,

@@ -27,7 +27,6 @@ class CompteBancaireFactory extends Factory
             'commentaires' => $this->faker->optional(0.3)->sentence(),
             'est_bloque' => false,
             'est_archive' => false,
-            'solde_initial' => $this->faker->randomFloat(2, 10000, 100000),
         ];
     }
 
