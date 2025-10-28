@@ -31,4 +31,20 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Railway PostgreSQL API Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration pour la synchronisation des comptes vers Railway PostgreSQL
+    | Les comptes créés localement (PostgreSQL) sont synchronisés vers Railway
+    |
+    */
+    'railway_api' => [
+        'sync_accounts_url' => env('RAILWAY_API_SYNC_ACCOUNTS_URL', 'https://your-railway-app.railway.app/api/sync/accounts'),
+        'key' => env('RAILWAY_API_KEY'),
+        'timeout' => env('RAILWAY_API_TIMEOUT', 60),
+        'retry_attempts' => env('RAILWAY_API_RETRY_ATTEMPTS', 3),
+    ],
+
 ];

@@ -37,8 +37,8 @@ class ApiHeadersMiddleware
             $requiredHeaders['Authorization'] = 'Bearer {jwt_token}';
         }
 
-        // Pour les routes de débocage/déblocage, ne pas exiger Content-Type
-        if ($request->is('api/v1/comptes/*/debloquer') || $request->is('api/v1/comptes/*/desarchiver')) {
+        // Pour les routes de débocage/déblocage et suppression, ne pas exiger Content-Type
+        if ($request->is('api/v1/comptes/*/debloquer') || $request->is('api/v1/comptes/*/desarchiver') || $request->is('api/v1/comptes/*') && $request->method() === 'DELETE') {
             unset($requiredHeaders['Content-Type']);
         }
 

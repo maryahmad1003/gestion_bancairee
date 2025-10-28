@@ -23,6 +23,7 @@ class CompteBancaire extends Model
         'client_id',
         'type_compte',
         'devise',
+        'solde_initial',
         'decouvert_autorise',
         'date_ouverture',
         'statut',
