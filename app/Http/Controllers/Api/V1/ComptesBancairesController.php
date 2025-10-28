@@ -55,24 +55,115 @@ class ComptesBancairesController extends Controller
      */
     public function index(Request $request)
     {
-        // Pour les tests, on affiche tous les comptes sans authentification
-        $query = CompteBancaire::with('client:id,nom,prenom,numero_client,telephone,email');
+        // Vérifier l'authentification et les permissions
+        $user = Auth::user();
 
-        // Filtres optionnels
-        if ($request->has('type_compte') && in_array($request->type_compte, ['courant', 'epargne'])) {
-            $query->where('type_compte', $request->type_compte);
+        // Admin peut voir tous les comptes, client seulement les siens
+        $query = CompteBancaire::with('client:id,nom,prenom,numero_client,telephone,email')
+            ->where('type_compte', '!=', 'joint') // Exclure les comptes joints
+            ->whereNull('deleted_at'); // Comptes non supprimés
+
+        if ($user && $user->role !== 'admin') {
+            // Client ne voit que ses propres comptes
+            $query->where('client_id', $user->client_id ?? null);
         }
 
-        if ($request->has('statut')) {
+        // Filtres par défaut : seulement comptes chèque et épargne actifs
+        $query->whereIn('type_compte', ['cheque', 'epargne'])
+              ->where('statut', 'actif');
+
+        // Filtres optionnels
+        if ($request->has('type') && in_array($request->type, ['cheque', 'epargne'])) {
+            $query->where('type_compte', $request->type);
+        }
+
+        if ($request->has('statut') && in_array($request->statut, ['actif', 'bloque', 'ferme'])) {
             $query->where('statut', $request->statut);
         }
 
-        $comptes = $query->paginate(15);
+        // Recherche par titulaire ou numéro
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('numero_compte', 'like', '%' . $search . '%')
+                  ->orWhereHas('client', function($clientQuery) use ($search) {
+                      $clientQuery->where('nom', 'like', '%' . $search . '%')
+                                  ->orWhere('prenom', 'like', '%' . $search . '%')
+                                  ->orWhere('numero_client', 'like', '%' . $search . '%');
+                  });
+            });
+        }
 
-        return $this->paginatedResponse(
-            CompteBancaireResource::collection($comptes),
-            'Liste des comptes bancaires récupérée avec succès'
-        );
+        // Tri
+        $sort = $request->get('sort', 'dateCreation');
+        $order = $request->get('order', 'desc');
+
+        switch ($sort) {
+            case 'dateCreation':
+                $query->orderBy('date_ouverture', $order);
+                break;
+            case 'solde':
+                $query->orderBy('solde', $order);
+                break;
+            case 'titulaire':
+                $query->join('clients', 'comptes_bancaires.client_id', '=', 'clients.id')
+                      ->orderBy('clients.nom', $order)
+                      ->orderBy('clients.prenom', $order)
+                      ->select('comptes_bancaires.*');
+                break;
+            default:
+                $query->orderBy('date_ouverture', $order);
+        }
+
+        // Pagination
+        $limit = min($request->get('limit', 10), 100);
+        $page = $request->get('page', 1);
+
+        $comptes = $query->paginate($limit, ['*'], 'page', $page);
+
+        // Transformer les données selon le format demandé
+        $transformedData = $comptes->getCollection()->map(function($compte) {
+            return [
+                'id' => $compte->id,
+                'numeroCompte' => $compte->numero_compte,
+                'titulaire' => $compte->client->nom_complet,
+                'type' => $compte->type_compte,
+                'solde' => $compte->solde ?? 0,
+                'devise' => $compte->devise,
+                'dateCreation' => $compte->date_ouverture->toISOString(),
+                'statut' => $compte->statut,
+                'motifBlocage' => $compte->getEstBloqueAttribute() ? 'Inactivité de 30+ jours' : null,
+                'metadata' => [
+                    'derniereModification' => $compte->updated_at->toISOString(),
+                    'version' => 1
+                ]
+            ];
+        });
+
+        // Créer une nouvelle collection avec les données transformées
+        $comptes->setCollection(collect($transformedData));
+
+        // Construire la réponse personnalisée
+        $response = [
+            'success' => true,
+            'data' => $transformedData,
+            'pagination' => [
+                'currentPage' => $comptes->currentPage(),
+                'totalPages' => $comptes->lastPage(),
+                'totalItems' => $comptes->total(),
+                'itemsPerPage' => $comptes->perPage(),
+                'hasNext' => $comptes->hasMorePages(),
+                'hasPrevious' => $comptes->currentPage() > 1,
+            ],
+            'links' => [
+                'self' => $request->url() . '?' . http_build_query($request->query()),
+                'next' => $comptes->nextPageUrl(),
+                'first' => $comptes->url(1),
+                'last' => $comptes->url($comptes->lastPage()),
+            ]
+        ];
+
+        return response()->json($response);
     }
 
     /**

@@ -54,7 +54,7 @@ class ApiHeadersMiddleware
         // Ajouter les en-têtes de réponse
         $response = $next($request);
 
-        $response->headers->set('Access-Control-Allow-Origin', 'http://front.banque.example.com');
+        $response->headers->set('Access-Control-Allow-Origin', '*');
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE');
         $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
         $response->headers->set('X-API-Version', 'v1');
