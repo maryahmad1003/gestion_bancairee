@@ -27,7 +27,7 @@ class TransactionFactory extends Factory
                 : null,
             'type_transaction' => $type,
             'montant' => $montant,
-            'devise' => $this->faker->randomElement(['EUR', 'USD', 'GBP']),
+            'devise' => 'XOF',
             'libelle' => $this->faker->sentence(3),
             'description' => $this->faker->optional(0.7)->paragraph(),
             'date_transaction' => $this->faker->dateTimeBetween('-1 year', 'now'),

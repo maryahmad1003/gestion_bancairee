@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('numero_compte')->unique();
             $table->uuid('client_id');
             $table->string('type_compte')->default('courant'); // courant, epargne, joint
-            $table->string('devise', 3)->default('EUR');
+            $table->string('devise', 3)->default('XOF');
             // $table->decimal('solde', 15, 2)->default(0); // Supprimé car calculé dynamiquement
             $table->decimal('decouvert_autorise', 10, 2)->default(0);
             $table->date('date_ouverture');

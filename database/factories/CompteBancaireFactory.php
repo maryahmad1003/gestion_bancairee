@@ -20,13 +20,14 @@ class CompteBancaireFactory extends Factory
             'numero_compte' => 'CB-' . $this->faker->unique()->regexify('[A-Z0-9]{10}'),
             'client_id' => \App\Models\Client::factory(),
             'type_compte' => $this->faker->randomElement(['cheque', 'epargne']),
-            'devise' => $this->faker->randomElement(['EUR', 'USD', 'GBP']),
+            'devise' => 'XOF',
             'decouvert_autorise' => $this->faker->randomFloat(2, 0, 2000),
             'date_ouverture' => $this->faker->dateTimeBetween('-10 years', 'now'),
             'statut' => $this->faker->randomElement(['actif', 'bloque', 'ferme']),
             'commentaires' => $this->faker->optional(0.3)->sentence(),
             'est_bloque' => false,
             'est_archive' => false,
+            'solde_initial' => $this->faker->randomFloat(2, 10000, 100000),
         ];
     }
 

@@ -34,11 +34,13 @@ class CompteBancaire extends Model
         'motif_blocage',
         'est_archive',
         'date_archivage',
-        'motif_archivage'
+        'motif_archivage',
+        'solde_initial'
     ];
 
     protected $casts = [
         'decouvert_autorise' => 'decimal:2',
+        'solde_initial' => 'decimal:2',
         'date_ouverture' => 'date',
         'date_debut_blocage' => 'datetime',
         'date_fin_blocage' => 'datetime',
@@ -115,6 +117,9 @@ class CompteBancaire extends Model
      */
     public function getSoldeAttribute(): float
     {
+        // Si le compte a un solde initial défini, l'utiliser comme base
+        $soldeBase = $this->solde_initial ?? 0;
+
         // Crédits : dépôts et virements reçus
         $credits = $this->transactions()
             ->whereIn('type_transaction', ['credit', 'virement_recus'])
@@ -127,7 +132,7 @@ class CompteBancaire extends Model
             ->where('statut', 'validee')
             ->sum('montant');
 
-        return $credits - $debits;
+        return $soldeBase + $credits - $debits;
     }
 
     // Ancienne méthode supprimée car remplacée par la nouvelle ci-dessous

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->uuid('compte_bancaire_destinataire_id')->nullable(); // Pour les virements
             $table->enum('type_transaction', ['debit', 'credit', 'virement_emis', 'virement_recus']);
             $table->decimal('montant', 15, 2);
-            $table->string('devise', 3)->default('EUR');
+            $table->string('devise', 3)->default('XOF');
             $table->string('libelle');
             $table->text('description')->nullable();
             $table->dateTime('date_transaction');

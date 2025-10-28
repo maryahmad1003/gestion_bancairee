@@ -34,6 +34,7 @@ class CompteBancaireSeeder extends Seeder
                 'client_id' => $clientTest1->id,
                 'type_compte' => 'cheque',
                 'statut' => 'actif',
+                'solde_initial' => 30000.00,
             ]);
 
             \App\Models\CompteBancaire::factory()->create([
@@ -41,6 +42,7 @@ class CompteBancaireSeeder extends Seeder
                 'client_id' => $clientTest1->id,
                 'type_compte' => 'epargne',
                 'statut' => 'actif',
+                'solde_initial' => 50000.00,
             ]);
         }
 
@@ -51,6 +53,7 @@ class CompteBancaireSeeder extends Seeder
                 'client_id' => $clientTest2->id,
                 'type_compte' => 'cheque',
                 'statut' => 'actif',
+                'solde_initial' => 25000.00,
             ]);
         }
     }
