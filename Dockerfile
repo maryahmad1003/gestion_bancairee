@@ -36,21 +36,21 @@ RUN mkdir -p storage/framework/{cache,data,sessions,testing,views} \
     && chmod -R 775 storage bootstrap/cache
 
 # Créer un fichier .env minimal pour le build
-RUN echo "APP_NAME=Laravel" > .env && \
+RUN echo "APP_NAME=Laravel Banking API" > .env && \
     echo "APP_ENV=production" >> .env && \
     echo "APP_KEY=" >> .env && \
     echo "APP_DEBUG=false" >> .env && \
-    echo "APP_URL=http://localhost" >> .env && \
+    echo "APP_URL=https://laravel-banking-api.onrender.com" >> .env && \
     echo "" >> .env && \
     echo "LOG_CHANNEL=stack" >> .env && \
     echo "LOG_LEVEL=error" >> .env && \
     echo "" >> .env && \
     echo "DB_CONNECTION=pgsql" >> .env && \
-    echo "DB_HOST=metro.proxy.rlwy.net" >> .env && \
-    echo "DB_PORT=36926" >> .env && \
-    echo "DB_DATABASE=railway" >> .env && \
-    echo "DB_USERNAME=postgres" >> .env && \
-    echo "DB_PASSWORD=zZotXUbMIQJIneqRhcYlTjzksIaCMfeW" >> .env && \
+    echo "DB_HOST=ep-wandering-haze-a4wqipnd-pooler.us-east-1.aws.neon.tech" >> .env && \
+    echo "DB_PORT=5432" >> .env && \
+    echo "DB_DATABASE=neondb" >> .env && \
+    echo "DB_USERNAME=neondb_owner" >> .env && \
+    echo "DB_PASSWORD=npg_N3MKug0mkzFD" >> .env && \
     echo "" >> .env && \
     echo "CACHE_DRIVER=file" >> .env && \
     echo "SESSION_DRIVER=file" >> .env && \
