@@ -14,7 +14,6 @@ return [
                 /*
                  * Route for accessing api documentation interface
                  */
-                'docs' => 'maryvonne/docs',
                 'api' => 'maryvonne/documentation',
             ],
             'paths' => [
@@ -71,7 +70,7 @@ return [
             /*
              * Route for accessing parsed swagger annotations.
              */
-            'docs' => 'maryvonne/documentation',
+            'docs' => 'maryvonne/docs',
             /*
              * Route for accessing api documentation interface
              */
