@@ -56,6 +56,12 @@ return [
             'throw' => false,
         ],
 
+        'views' => [
+    'driver' => 'local',
+    'root' => resource_path('views'),
+],
+
+
     ],
 
     /*

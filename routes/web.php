@@ -28,8 +28,9 @@ Route::get('/maryvonne/documentation', function () {
 
     // Forcer l'URL HTTPS pour le déploiement
     if (app()->environment('production')) {
-        $urlToDocs = str_replace('http://', 'https://', $urlToDocs);
-    }
+     $urlToDocs = str_replace('http://', 'https://', $urlToDocs);
+     $urlToDocs = str_replace('http://gestion-bancairee-5.onrender.com', 'https://gestion-bancairee-5.onrender.com', $urlToDocs);
+ }
 
     return view('vendor.l5-swagger.index', compact('documentation', 'urlToDocs', 'operationsSorter', 'configUrl', 'validatorUrl', 'useAbsolutePath'));
 });
