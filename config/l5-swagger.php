@@ -174,8 +174,8 @@ return [
                     'description' => 'Laravel Passport OAuth2 Security',
                     'flows' => [
                         'password' => [
-                            'tokenUrl' => config('app.url') . '/api/v1/auth/login',
-                            'refreshUrl' => config('app.url') . '/api/v1/auth/refresh',
+                            'tokenUrl' => 'https://gestion-bancairee-5.onrender.com/api/v1/auth/login',
+                            'refreshUrl' => 'https://gestion-bancairee-5.onrender.com/api/v1/auth/refresh',
                             'scopes' => [
                                 'view_all_clients' => 'Voir tous les clients',
                                 'manage_clients' => 'Gérer les clients',
