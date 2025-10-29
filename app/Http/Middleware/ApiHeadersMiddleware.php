@@ -18,10 +18,11 @@ class ApiHeadersMiddleware
         // Gérer les requêtes OPTIONS pour CORS
         if ($request->getMethod() === 'OPTIONS') {
             return response('', 200)
-                ->header('Access-Control-Allow-Origin', '*')
-                ->header('Access-Control-Allow-Methods', '*')
-                ->header('Access-Control-Allow-Headers', '*')
-                ->header('Access-Control-Max-Age', '86400');
+                ->header('Access-Control-Allow-Origin', 'https://gestion-bancairee-5.onrender.com')
+                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With')
+                ->header('Access-Control-Max-Age', '86400')
+                ->header('Access-Control-Allow-Credentials', 'false');
         }
 
         // Pour les tests, on désactive temporairement la validation des en-têtes
@@ -63,9 +64,9 @@ class ApiHeadersMiddleware
         // Ajouter les en-têtes de réponse
         $response = $next($request);
 
-        $response->headers->set('Access-Control-Allow-Origin', '*');
-        $response->headers->set('Access-Control-Allow-Methods', '*');
-        $response->headers->set('Access-Control-Allow-Headers', '*');
+        $response->headers->set('Access-Control-Allow-Origin', 'https://gestion-bancairee-5.onrender.com');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
         $response->headers->set('Access-Control-Max-Age', '86400');
         $response->headers->set('Access-Control-Allow-Credentials', 'false');
         $response->headers->set('X-API-Version', 'v1');
