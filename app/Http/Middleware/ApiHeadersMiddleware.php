@@ -65,8 +65,9 @@ class ApiHeadersMiddleware
 
         $response->headers->set('Access-Control-Allow-Origin', '*');
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept');
+        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept, X-Requested-With, X-CSRF-TOKEN');
         $response->headers->set('Access-Control-Max-Age', '86400');
+        $response->headers->set('Access-Control-Allow-Credentials', 'false');
         $response->headers->set('X-API-Version', 'v1');
 
         return $response;
