@@ -19,8 +19,8 @@ class ApiHeadersMiddleware
         if ($request->getMethod() === 'OPTIONS') {
             return response('', 200)
                 ->header('Access-Control-Allow-Origin', '*')
-                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-                ->header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept')
+                ->header('Access-Control-Allow-Methods', '*')
+                ->header('Access-Control-Allow-Headers', '*')
                 ->header('Access-Control-Max-Age', '86400');
         }
 
@@ -64,8 +64,8 @@ class ApiHeadersMiddleware
         $response = $next($request);
 
         $response->headers->set('Access-Control-Allow-Origin', '*');
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept, X-Requested-With, X-CSRF-TOKEN');
+        $response->headers->set('Access-Control-Allow-Methods', '*');
+        $response->headers->set('Access-Control-Allow-Headers', '*');
         $response->headers->set('Access-Control-Max-Age', '86400');
         $response->headers->set('Access-Control-Allow-Credentials', 'false');
         $response->headers->set('X-API-Version', 'v1');
