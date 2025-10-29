@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use L5Swagger\Http\Controllers\SwaggerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,23 +21,28 @@ Route::get('/', function () {
 // Route pour la documentation Swagger
 Route::get('/maryvonne/documentation', function () {
     $documentation = 'default';
-    $urlToDocs = route('l5-swagger.'.$documentation.'.docs');
+
+    // Génère l'URL vers le fichier JSON Swagger
+    $urlToDocs = 'http://localhost:8000/storage/api-docs.json';
+
+    // Corrige le protocole selon l’environnement
+    if (app()->environment('production')) {
+        $urlToDocs = preg_replace('#^http:#', 'https:', $urlToDocs);
+    } else {
+        $urlToDocs = preg_replace('#^https:#', 'http:', $urlToDocs);
+    }
+
     $operationsSorter = config('l5-swagger.defaults.operations_sort');
     $configUrl = config('l5-swagger.defaults.additional_config_url');
     $validatorUrl = config('l5-swagger.defaults.validator_url');
     $useAbsolutePath = config('l5-swagger.defaults.paths.use_absolute_path');
 
-    // Forcer l'URL HTTPS pour le déploiement
-    if (app()->environment('production')) {
-        $urlToDocs = str_replace('http://', 'https://', $urlToDocs);
-        $urlToDocs = str_replace('http://gestion-bancairee-5.onrender.com', 'https://gestion-bancairee-5.onrender.com', $urlToDocs);
-        $urlToDocs = str_replace('http://localhost:8000', 'https://gestion-bancairee-5.onrender.com', $urlToDocs);
-        $urlToDocs = str_replace('localhost:8000', 'gestion-bancairee-5.onrender.com', $urlToDocs);
-    } else {
-        // Pour le développement local, garder HTTP
-        $urlToDocs = str_replace('https://', 'http://', $urlToDocs);
-    }
-
-    return view('vendor.l5-swagger.index', compact('documentation', 'urlToDocs', 'operationsSorter', 'configUrl', 'validatorUrl', 'useAbsolutePath'));
+    return view('vendor.l5-swagger.index', compact(
+        'documentation',
+        'urlToDocs',
+        'operationsSorter',
+        'configUrl',
+        'validatorUrl',
+        'useAbsolutePath'
+    ));
 });
-

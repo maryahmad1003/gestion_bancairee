@@ -144,7 +144,7 @@
 
         const ui = SwaggerUIBundle({
             dom_id: '#swagger-ui',
-            url: "{!! $urlToDocs !!}",
+            url: "http://localhost:8000/storage/api-docs.json",
             operationsSorter: operationsSorter,
             configUrl: configUrl,
             validatorUrl: validatorUrl,
@@ -176,7 +176,8 @@
             defaultModelsExpandDepth: 1,
             defaultModelExpandDepth: 1,
             showExtensions: false,
-            showCommonExtensions: false
+            showCommonExtensions: false,
+            supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch']
         });
 
         window.ui = ui;
