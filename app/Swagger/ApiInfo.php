@@ -17,7 +17,7 @@ namespace App\Swagger;
  *         description="Serveur de développement"
  *     ),
  *     @OA\Server(
- *         url="https://laravel-banking-api.onrender.com/api/v1",
+ *         url="https://gestion-bancairee-5.onrender.com'/api/v1",
  *         description="Serveur de production"
  *     ),
  *     @OA\Tag(
