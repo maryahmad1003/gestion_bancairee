@@ -70,7 +70,7 @@ return [
             /*
              * Route for accessing parsed swagger annotations.
              */
-            'docs' => 'maryvonne/docs',
+            'docs' => 'maryvonne/documentation',
             /*
              * Route for accessing api documentation interface
              */
