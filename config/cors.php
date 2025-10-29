@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => ['https://gestion-bancairee-5.onrender.com'],
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 
