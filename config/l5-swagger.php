@@ -14,7 +14,7 @@ return [
                 /*
                  * Route for accessing api documentation interface
                  */
-                'api' => 'maryvonne/documentation',
+                'api' => 'api/documentation',
             ],
             'paths' => [
                 /*

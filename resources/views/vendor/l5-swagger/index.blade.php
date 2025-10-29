@@ -103,7 +103,7 @@
                 background: rgba(249,62,62,.25);
             }
             #dark-mode .loading-container .loading:before{
-                border-color: rgba(255,255,255,10%);
+                border-color: rgba(255,255,255,0.1);
                 border-top-color: rgba(255,255,255,.6);
             }
             #dark-mode svg:not(:root){
@@ -119,17 +119,35 @@
 <body @if(config('l5-swagger.defaults.ui.display.dark_mode')) id="dark-mode" @endif>
 <div id="swagger-ui"></div>
 
+@php
+    $operationsSorter = isset($operationsSorter) ? $operationsSorter : null;
+    $configUrl = isset($configUrl) ? $configUrl : null;
+    $validatorUrl = isset($validatorUrl) ? $validatorUrl : null;
+    $docExpansion = config('l5-swagger.defaults.ui.display.doc_expansion', 'none');
+    $filterEnabled = config('l5-swagger.defaults.ui.display.filter');
+    $persistAuthorization = config('l5-swagger.defaults.ui.authorization.persist_authorization') ? 'true' : 'false';
+    $oauth2Enabled = in_array('oauth2', array_column(config('l5-swagger.defaults.securityDefinitions.securitySchemes'), 'type'));
+    $usePkce = config('l5-swagger.defaults.ui.authorization.oauth2.use_pkce_with_authorization_code_grant');
+@endphp
+
 <script src="{{ l5_swagger_asset($documentation, 'swagger-ui-bundle.js') }}"></script>
 <script src="{{ l5_swagger_asset($documentation, 'swagger-ui-standalone-preset.js') }}"></script>
 <script>
     window.onload = function() {
         // Build a system
+        var operationsSorter = {!! isset($operationsSorter) ? json_encode($operationsSorter) : 'null' !!};
+        var configUrl = {!! isset($configUrl) ? json_encode($configUrl) : 'null' !!};
+        var validatorUrl = {!! isset($validatorUrl) ? json_encode($validatorUrl) : 'null' !!};
+        var docExpansion = {!! json_encode($docExpansion) !!};
+        var filterEnabled = {!! $filterEnabled ? 'true' : 'false' !!};
+        var persistAuthorization = {!! json_encode($persistAuthorization) !!};
+
         const ui = SwaggerUIBundle({
             dom_id: '#swagger-ui',
             url: "{!! $urlToDocs !!}",
-            operationsSorter: {!! isset($operationsSorter) ? '"' . $operationsSorter . '"' : 'null' !!},
-            configUrl: {!! isset($configUrl) ? '"' . $configUrl . '"' : 'null' !!},
-            validatorUrl: {!! isset($validatorUrl) ? '"' . $validatorUrl . '"' : 'null' !!},
+            operationsSorter: operationsSorter,
+            configUrl: configUrl,
+            validatorUrl: validatorUrl,
             oauth2RedirectUrl: "{{ route('l5-swagger.'.$documentation.'.oauth2_callback', [], $useAbsolutePath) }}",
 
             requestInterceptor: function(request) {
@@ -147,10 +165,10 @@
             ],
 
             layout: "StandaloneLayout",
-            docExpansion : "{!! config('l5-swagger.defaults.ui.display.doc_expansion', 'none') !!}",
+            docExpansion: docExpansion,
             deepLinking: true,
-            filter: {!! config('l5-swagger.defaults.ui.display.filter') ? 'true' : 'false' !!},
-            persistAuthorization: "{!! config('l5-swagger.defaults.ui.authorization.persist_authorization') ? 'true' : 'false' !!}",
+            filter: filterEnabled,
+            persistAuthorization: persistAuthorization,
 
             // Fix for responses_Responses rendering issue
             tryItOutEnabled: true,
@@ -159,17 +177,16 @@
             defaultModelExpandDepth: 1,
             showExtensions: false,
             showCommonExtensions: false
+        });
 
-        })
+        window.ui = ui;
 
-        window.ui = ui
-
-        @if(in_array('oauth2', array_column(config('l5-swagger.defaults.securityDefinitions.securitySchemes'), 'type')))
+        @if($oauth2Enabled)
         ui.initOAuth({
-            usePkceWithAuthorizationCodeGrant: "{!! (bool)config('l5-swagger.defaults.ui.authorization.oauth2.use_pkce_with_authorization_code_grant') !!}"
-        })
+            usePkceWithAuthorizationCodeGrant: @if($usePkce) true @else false @endif
+        });
         @endif
-    }
+    };
 </script>
 </body>
 </html>

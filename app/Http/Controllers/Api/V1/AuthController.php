@@ -42,13 +42,7 @@ class AuthController extends Controller
         }
 
         // Créer le token avec les scopes appropriés
-        $token = $user->createToken('API Token', $user->permissions);
-
-        // Ajouter les claims personnalisés
-        $token->token->forceFill([
-            'role' => $user->role,
-            'permissions' => $user->permissions,
-        ])->save();
+        $token = $user->createToken('API Token', []);
 
         // Créer la réponse avec le cookie
         $response = response()->json([
@@ -94,7 +88,7 @@ class AuthController extends Controller
         $request->user()->token()->revoke();
 
         // Créer un nouveau token
-        $token = $user->createToken('API Token', $user->permissions);
+        $token = $user->createToken('API Token', []);
 
         // Ajouter les claims personnalisés
         $token->token->forceFill([

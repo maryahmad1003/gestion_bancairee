@@ -26,13 +26,16 @@ class Client extends Model
         'ville',
         'code_postal',
         'pays',
-        'statut'
+        'statut',
+        'password',
+        'code'
     ];
 
     protected $casts = [
         'date_naissance' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'password' => 'hashed',
     ];
 
     protected static function boot()

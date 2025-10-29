@@ -79,12 +79,22 @@ class CompteBancaire extends Model
     }
 
     /**
-     * Générer un numéro de compte unique
+     * Générer un numéro de compte unique selon le format C00123456
      */
     private static function generateNumeroCompte(): string
     {
         do {
-            $numero = 'CB-' . strtoupper(Str::random(10));
+            // Générer un numéro séquentiel à partir de 00123456
+            $lastAccount = self::orderBy('numero_compte', 'desc')->first();
+            if ($lastAccount) {
+                // Extraire le numéro après 'C00'
+                $lastNumber = (int) substr($lastAccount->numero_compte, 3);
+                $newNumber = $lastNumber + 1;
+            } else {
+                $newNumber = 123456; // Numéro de départ
+            }
+
+            $numero = 'C00' . str_pad($newNumber, 6, '0', STR_PAD_LEFT);
         } while (self::where('numero_compte', $numero)->exists());
 
         return $numero;

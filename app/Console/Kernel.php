@@ -31,20 +31,20 @@ class Kernel extends ConsoleKernel
             ->description('Synchronisation quotidienne des comptes vers le cloud');
 
         // Débloquer automatiquement les comptes épargne dont la date de fin de blocage est échue
-        $schedule->job(DebloquerComptesEpargne::class)
-            ->dailyAt('01:00')
+        $schedule->call(function () {
+            DebloquerComptesEpargne::dispatch();
+        })->dailyAt('01:00')
             ->timezone('Africa/Dakar')
             ->withoutOverlapping()
-            ->runInBackground()
             ->name('debloquer-comptes-epargne')
             ->description('Déblocage automatique des comptes épargne expirés');
 
         // Archiver automatiquement les comptes épargne bloqués depuis plus de 30 jours
-        $schedule->job(ArchiverComptesBloquesExpires::class)
-            ->dailyAt('02:00')
+        $schedule->call(function () {
+            ArchiverComptesBloquesExpires::dispatch();
+        })->dailyAt('02:00')
             ->timezone('Africa/Dakar')
             ->withoutOverlapping()
-            ->runInBackground()
             ->name('archiver-comptes-bloques-expires')
             ->description('Archivage automatique des comptes épargne bloqués expirés');
     }

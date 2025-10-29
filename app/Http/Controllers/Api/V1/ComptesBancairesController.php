@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Events\ClientNotificationEvent;
@@ -10,6 +12,8 @@ use App\Http\Requests\UpdateCompteBancaireRequest;
 use App\Http\Resources\CompteBancaireResource;
 use App\Models\Client;
 use App\Models\CompteBancaire;
+use App\Models\User;
+use App\Rules\ValidNciAndTelephone;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class ComptesBancairesController extends Controller
@@ -68,18 +73,18 @@ class ComptesBancairesController extends Controller
             $query->where('client_id', $user->client_id ?? null);
         }
 
-        // Filtres par défaut : seulement comptes chèque et épargne actifs
+        // Filtres par défaut : seulement comptes chèque et épargne actifs (pas de comptes bloqués ou fermés)
         $query->whereIn('type_compte', ['cheque', 'epargne'])
-              ->where('statut', 'actif');
+              ->where('statut', 'actif')
+              ->where('est_archive', false);
 
         // Filtres optionnels
         if ($request->has('type') && in_array($request->type, ['cheque', 'epargne'])) {
             $query->where('type_compte', $request->type);
         }
 
-        if ($request->has('statut') && in_array($request->statut, ['actif', 'bloque', 'ferme'])) {
-            $query->where('statut', $request->statut);
-        }
+        // Note: Selon US 2.0, on n'affiche pas les comptes bloqués ou fermés
+        // Donc on ne permet pas le filtre par statut
 
         // Recherche par titulaire ou numéro
         if ($request->has('search') && !empty($request->search)) {
@@ -241,11 +246,11 @@ class ComptesBancairesController extends Controller
      *             required={"type", "soldeInitial", "devise", "client"},
      *             @OA\Property(property="type", type="string", enum={"cheque", "epargne"}, example="cheque"),
      *             @OA\Property(property="soldeInitial", type="number", format="float", example=500000),
-     *             @OA\Property(property="devise", type="string", example="FCFA"),
+     *             @OA\Property(property="devise", type="string", example="XOF"),
      *             @OA\Property(property="solde", type="number", format="float", example=10000),
      *             @OA\Property(property="client", type="object",
-     *                 @OA\Property(property="id", type="string", format="uuid", nullable=true, example=null),
-     *                 @OA\Property(property="titulaire", type="string", example="Hawa BB Wane"),
+     *                 @OA\Property(property="id", type="string", format="uuid", nullable=true, example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="titulaire", type="string", example="Cheikh Sy"),
      *                 @OA\Property(property="email", type="string", format="email", example="cheikh.sy@example.com"),
      *                 @OA\Property(property="telephone", type="string", example="+221771234567"),
      *                 @OA\Property(property="adresse", type="string", example="Dakar, Sénégal")
@@ -281,8 +286,19 @@ class ComptesBancairesController extends Controller
      */
     public function store(Request $request)
     {
-        // Les données sont déjà validées par le service de validation
-        $validated = $request->all();
+        // Validation des données d'entrée selon les spécifications
+        $validated = $request->validate([
+            'type' => 'required|in:cheque,epargne',
+            'soldeInitial' => 'required|numeric|min:10000',
+            'devise' => 'required|string|in:FCFA,XOF,EUR,USD',
+            'client' => 'required|array',
+            'client.id' => 'sometimes|string|uuid|nullable',
+            'client.titulaire' => 'required_without:client.id|string|max:255',
+            'client.email' => 'required_without:client.id|email|max:255|unique:clients,email',
+            'client.telephone' => ['required_without:client.id', 'string', 'max:20', 'unique:clients,telephone', new ValidNciAndTelephone()],
+            'client.adresse' => 'required|string|max:500',
+            'client.nci' => 'sometimes|string|max:20',
+        ]);
 
         DB::beginTransaction();
 
@@ -298,39 +314,49 @@ class ComptesBancairesController extends Controller
                 $nom = $titulaireParts[1] ?? $titulaireParts[0];
                 $prenom = $titulaireParts[0];
 
-                // Vérifier si un client existe déjà avec ces informations
-                $client = Client::where(function($query) use ($nom, $prenom, $validated) {
-                    $query->where('nom', $nom)
-                          ->where('prenom', $prenom)
-                          ->where('telephone', $validated['client']['telephone']);
-                })->orWhere('email', $validated['client']['email'])
-                  ->first();
+                // Générer mot de passe et code pour le nouveau client
+                $password = $this->generatePassword();
+                $code = $this->generateCode();
 
-                // Si le client n'existe pas, le créer (l'UUID sera généré automatiquement)
-                if (!$client) {
-                    $client = Client::create([
-                        'nom' => $nom,
-                        'prenom' => $prenom,
-                        'email' => $validated['client']['email'],
-                        'telephone' => $validated['client']['telephone'],
-                        'adresse' => $validated['client']['adresse'] ?? null,
-                        'date_naissance' => $validated['client']['date_naissance'] ?? now()->subYears(18)->toDateString(),
-                    ]);
-                }
-                // Si le client existe, on l'utilise directement (son UUID est déjà généré)
+                // Créer le client avec mot de passe et code
+                $client = Client::create([
+                    'nom' => $nom,
+                    'prenom' => $prenom,
+                    'email' => $validated['client']['email'],
+                    'telephone' => $validated['client']['telephone'],
+                    'adresse' => $validated['client']['adresse'],
+                    'date_naissance' => now()->subYears(18)->toDateString(), // Valeur par défaut
+                    'password' => $password,
+                    'code' => $code,
+                ]);
+
+                // Créer un utilisateur lié au client
+                $user = User::create([
+                    'name' => $client->nom_complet,
+                    'email' => $client->email,
+                    'password' => $password,
+                    'role' => 'user',
+                    'statut' => 'actif',
+                    'authenticatable_type' => Client::class,
+                    'authenticatable_id' => $client->id,
+                ]);
             }
 
             // Créer le compte bancaire
             $compte = CompteBancaire::create([
                 'client_id' => $client->id,
                 'type_compte' => $validated['type'],
-                'devise' => 'XOF', // Utiliser XOF au lieu de FCFA pour respecter la contrainte de 3 caractères
+                'devise' => $validated['devise'],
                 'solde_initial' => $validated['soldeInitial'],
                 'decouvert_autorise' => 0, // Par défaut pour les comptes chèque
                 'date_ouverture' => now()->toDateString(),
+                'statut' => 'actif',
             ]);
 
             DB::commit();
+
+            // Envoyer les notifications (email avec mot de passe, SMS avec code)
+            $this->sendAccountCreationNotifications($compte, $client, $password ?? null, $code ?? null);
 
             // Retourner la réponse dans le format demandé
             return response()->json([
@@ -343,8 +369,8 @@ class ComptesBancairesController extends Controller
                     'type' => $compte->type_compte,
                     'solde' => (float) $validated['soldeInitial'],
                     'devise' => $compte->devise,
-                    'dateCreation' => $compte->date_ouverture,
-                    'statut' => $compte->statut ?? 'actif',
+                    'dateCreation' => $compte->date_ouverture->toISOString(),
+                    'statut' => $compte->statut,
                     'metadata' => [
                         'derniereModification' => $compte->updated_at->toISOString(),
                         'version' => 1
@@ -376,7 +402,67 @@ class ComptesBancairesController extends Controller
      */
     private function generateCode(): string
     {
-        return str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+        return str_pad((string) rand(0, 999999), 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Envoyer les notifications de création de compte (mail et SMS)
+     */
+    private function sendAccountCreationNotifications(CompteBancaire $compte, Client $client, ?string $password = null, ?string $code = null)
+    {
+        try {
+            // Envoi de mail avec mot de passe
+            $this->sendAccountCreationEmail($compte, $client, $password);
+
+            // Envoi de SMS avec code
+            $this->sendAccountCreationSMS($compte, $client, $code);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'envoi des notifications de création de compte', [
+                'compte_id' => $compte->id,
+                'client_id' => $client->id,
+                'error' => $e->getMessage(),
+            ]);
+            // Ne pas échouer la création du compte pour autant
+        }
+    }
+
+    /**
+     * Envoyer l'email de création de compte avec mot de passe
+     */
+    private function sendAccountCreationEmail(CompteBancaire $compte, Client $client, ?string $password = null)
+    {
+        // Simulation d'envoi d'email avec mot de passe
+        Log::info('Email de création de compte envoyé', [
+            'to' => $client->email,
+            'compte' => $compte->numero_compte,
+            'titulaire' => $client->nom_complet,
+            'password' => $password ? 'Envoyé' : 'Non généré',
+        ]);
+
+        // En production, utiliser un service de mail comme Mailgun, SendGrid, etc.
+        // Mail::to($client->email)->send(new AccountCreated($compte, $client, $password));
+    }
+
+    /**
+     * Envoyer le SMS de création de compte avec code
+     */
+    private function sendAccountCreationSMS(CompteBancaire $compte, Client $client, ?string $code = null)
+    {
+        // Simulation d'envoi de SMS avec code
+        Log::info('SMS de création de compte envoyé', [
+            'to' => $client->telephone,
+            'compte' => $compte->numero_compte,
+            'titulaire' => $client->nom_complet,
+            'code' => $code ? 'Envoyé' : 'Non généré',
+        ]);
+
+        // En production, utiliser un service SMS comme Twilio, etc.
+        // $smsService = app(SmsServiceInterface::class);
+        // $message = $code
+        //     ? "Votre compte {$compte->numero_compte} a été créé. Code: {$code}"
+        //     : "Votre compte {$compte->numero_compte} a été créé avec succès.";
+        // $smsService->send($client->telephone, $message);
     }
 
     /**
@@ -414,10 +500,93 @@ class ComptesBancairesController extends Controller
         // Pour les tests, on utilise l'ID directement au lieu du model binding
         $compte_bancaire = CompteBancaire::with('client:id,nom,prenom,numero_client,telephone,email')->findOrFail($id);
 
-        return $this->successResponse(
-            new CompteBancaireResource($compte_bancaire),
-            'Compte bancaire récupéré avec succès'
-        );
+        // Selon US: Détail compte par ID - Pour les comptes épargne, afficher dates de blocage
+        $data = new CompteBancaireResource($compte_bancaire);
+
+        // Ajouter les dates de blocage pour les comptes épargne
+        if ($compte_bancaire->type_compte === 'epargne') {
+            $data->additional([
+                'dateDebutBlocage' => $compte_bancaire->date_debut_blocage?->toISOString(),
+                'dateFinBlocage' => $compte_bancaire->date_fin_blocage?->toISOString(),
+            ]);
+        }
+
+        // Selon US: Si le compte épargne est archivé, récupérer depuis Neon
+        if ($compte_bancaire->type_compte === 'epargne' && $compte_bancaire->est_archive) {
+            // Simulation de récupération depuis Neon
+            $neonData = $this->getArchivedSavingsAccountFromNeon($compte_bancaire->id);
+            if ($neonData) {
+                $data = $data->additional($neonData);
+            }
+        }
+
+        return $this->successResponse($data, 'Compte bancaire récupéré avec succès');
+    }
+
+    /**
+     * Récupérer un compte bancaire par numéro
+     */
+    public function showByNumero($numeroCompte)
+    {
+        $compte_bancaire = CompteBancaire::with('client:id,nom,prenom,numero_client,telephone,email')
+            ->where('numero_compte', $numeroCompte)
+            ->firstOrFail();
+
+        // Selon US: Détail compte par numéro - Même logique que show()
+        $data = new CompteBancaireResource($compte_bancaire);
+
+        // Ajouter les dates de blocage pour les comptes épargne
+        if ($compte_bancaire->type_compte === 'epargne') {
+            $data->additional([
+                'dateDebutBlocage' => $compte_bancaire->date_debut_blocage?->toISOString(),
+                'dateFinBlocage' => $compte_bancaire->date_fin_blocage?->toISOString(),
+            ]);
+        }
+
+        // Selon US: Si le compte épargne est archivé, récupérer depuis Neon
+        if ($compte_bancaire->type_compte === 'epargne' && $compte_bancaire->est_archive) {
+            $neonData = $this->getArchivedSavingsAccountFromNeon($compte_bancaire->id);
+            if ($neonData) {
+                $data = $data->additional($neonData);
+            }
+        }
+
+        return $this->successResponse($data, 'Compte bancaire récupéré avec succès');
+    }
+
+    /**
+     * Récupérer un compte épargne archivé depuis Neon
+     */
+    private function getArchivedSavingsAccountFromNeon($compteId)
+    {
+        try {
+            // Simulation d'appel à Neon
+            // En production, remplacer par un vrai appel API
+            $response = Http::timeout(30)->get(config('services.neon_api_url') . '/archived-accounts/' . $compteId, [
+                'api_key' => config('services.neon_api_key'),
+            ]);
+
+            if ($response->successful()) {
+                return $response->json()['data'] ?? null;
+            }
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la récupération du compte archivé depuis Neon', [
+                'compte_id' => $compteId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Récupérer un client par numéro de téléphone
+     */
+    public function getClientByTelephone($telephone)
+    {
+        $client = Client::where('telephone', $telephone)->firstOrFail();
+
+        return $this->successResponse($client, 'Client récupéré avec succès');
     }
 
     /**
@@ -638,11 +807,11 @@ class ComptesBancairesController extends Controller
          // Convertir la durée en jours si nécessaire
          $dureeJours = $validated['unite'] === 'mois' ? $validated['duree'] * 30 : $validated['duree'];
 
-         // Vérifier que c'est un compte épargne actif
+         // Vérifier que c'est un compte épargne actif (selon US: Blocage)
          if ($compte_bancaire->type_compte !== 'epargne') {
              return $this->errorResponse('Seuls les comptes épargne peuvent être bloqués.', 400);
          }
-
+ 
          if ($compte_bancaire->statut !== 'actif') {
              return $this->errorResponse('Le compte doit être actif pour être bloqué.', 400);
          }
@@ -671,8 +840,8 @@ class ComptesBancairesController extends Controller
                          'id' => $compte_bancaire->id,
                          'statut' => 'bloque',
                          'motifBlocage' => $validated['motif'],
-                         'dateBlocage' => $compte_bancaire->date_debut_blocage->toISOString(),
-                         'dateDeblocagePrevue' => $compte_bancaire->date_fin_blocage->toISOString(),
+                         'dateDebutBlocage' => $compte_bancaire->date_debut_blocage->toISOString(),
+                         'dateFinBlocage' => $compte_bancaire->date_fin_blocage->toISOString(),
                      ],
                      'timestamp' => now()->toISOString(),
                  ]);
@@ -819,18 +988,22 @@ class ComptesBancairesController extends Controller
             'motif' => 'required|string|max:255',
         ]);
 
-        // Vérifier que le compte peut être archivé
-        if ($compte_bancaire->statut !== 'actif') {
-            return $this->errorResponse('Seul un compte actif peut être archivé.', 400);
+        // Selon US: Archivage - Seul les comptes épargne bloqués dont la date de début de blocage est échue peuvent être archivés
+        if ($compte_bancaire->type_compte !== 'epargne') {
+            return $this->errorResponse('Seuls les comptes épargne peuvent être archivés.', 400);
+        }
+
+        if (!$compte_bancaire->getEstBloqueAttribute()) {
+            return $this->errorResponse('Le compte doit être bloqué pour être archivé.', 400);
         }
 
         if ($compte_bancaire->est_archive) {
             return $this->errorResponse('Le compte est déjà archivé.', 400);
         }
 
-        // Vérifier que le solde est nul pour les comptes chèque
-        if ($compte_bancaire->type_compte === 'cheque' && $compte_bancaire->solde > 0) {
-            return $this->errorResponse('Le compte chèque doit avoir un solde nul ou négatif pour être archivé.', 400);
+        // Vérifier que la date de début de blocage est échue
+        if ($compte_bancaire->date_debut_blocage && $compte_bancaire->date_debut_blocage->isFuture()) {
+            return $this->errorResponse('La date de début de blocage n\'est pas encore échue.', 400);
         }
 
         try {
@@ -907,8 +1080,22 @@ class ComptesBancairesController extends Controller
         // Pour les tests, on utilise l'ID directement
         $compte_bancaire = CompteBancaire::findOrFail($id);
 
+        // Selon US: Désarchivage - Seul les comptes épargne bloqués dont la date de fin de blocage est échue peuvent être désarchivés
+        if ($compte_bancaire->type_compte !== 'epargne') {
+            return $this->errorResponse('Seuls les comptes épargne peuvent être désarchivés.', 400);
+        }
+
+        if (!$compte_bancaire->getEstBloqueAttribute()) {
+            return $this->errorResponse('Le compte doit être bloqué pour être désarchivé.', 400);
+        }
+
         if (!$compte_bancaire->est_archive) {
             return $this->errorResponse('Le compte n\'est pas archivé.', 400);
+        }
+
+        // Vérifier que la date de fin de blocage est échue
+        if ($compte_bancaire->date_fin_blocage && $compte_bancaire->date_fin_blocage->isFuture()) {
+            return $this->errorResponse('La date de fin de blocage n\'est pas encore échue.', 400);
         }
 
         try {
@@ -1004,16 +1191,15 @@ class ComptesBancairesController extends Controller
              }
          }
 
+         // Selon US: Supprimer compte - Seul les comptes actifs peuvent être supprimés
+         if ($compte_bancaire->statut !== 'actif') {
+             return $this->errorResponse('Seul un compte actif peut être supprimé.', 400);
+         }
+ 
          // Vérifier si le compte est bloqué
          if ($compte_bancaire->getEstBloqueAttribute()) {
              return $this->errorResponse('Le compte est bloqué. Veuillez le débloquer avant de le supprimer.', 400);
          }
-
-         // Pour les tests, permettre la suppression de tous les comptes
-         // Note: En production, il faudrait vérifier le solde pour les comptes chèque
-         // if ($compte_bancaire->type_compte === 'cheque' && $compte_bancaire->solde !== 0) {
-         //     return $this->errorResponse('Le compte chèque doit avoir un solde nul pour être supprimé.', 400);
-         // }
 
          try {
              $compte_bancaire->delete();
