@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('telephone');
             $table->date('date_naissance');
+            $table->string('password')->nullable(); // Ajout du champ password
+            $table->string('code')->nullable(); // Ajout du champ code
             $table->string('adresse')->nullable();
             $table->string('ville')->nullable();
             $table->string('code_postal')->nullable();

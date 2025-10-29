@@ -5,34 +5,36 @@ services:
     plan: starter
     envVars:
       - key: APP_NAME
-        value: Laravel Banking API
+        value: Laravel
       - key: APP_ENV
-        value: production
+        value: local
       - key: APP_KEY
-        generateValue: true
+        value: base64:BmopHdpkEyJ71+zT0RiqryPWH7A4HK9D5T/WCy6UKfQ=
       - key: APP_DEBUG
-        value: false
+        value: true
       - key: APP_URL
-        fromService:
-          type: web
-          name: laravel-banking-api
-          property: host
+        value: http://localhost
+
       - key: LOG_CHANNEL
         value: stack
+      - key: LOG_DEPRECATIONS_CHANNEL
+        value: null
       - key: LOG_LEVEL
-        value: error
+        value: debug
+
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
-        value: ep-wandering-haze-a4wqipnd-pooler.us-east-1.aws.neon.tech
+        value: metro.proxy.rlwy.net
       - key: DB_PORT
-        value: 5432
+        value: 36926
       - key: DB_DATABASE
-        value: neondb
+        value: railway
       - key: DB_USERNAME
-        value: neondb_owner
+        value: postgres
       - key: DB_PASSWORD
-        value: npg_N3MKug0mkzFD
+        value: zZotXUbMIQJIneqRhcYlTjzksIaCMfeW
+
       - key: BROADCAST_DRIVER
         value: log
       - key: CACHE_DRIVER
@@ -45,22 +47,77 @@ services:
         value: file
       - key: SESSION_LIFETIME
         value: 120
+
+      - key: MEMCACHED_HOST
+        value: 127.0.0.1
+      - key: REDIS_HOST
+        value: 127.0.0.1
+      - key: REDIS_PASSWORD
+        value: null
+      - key: REDIS_PORT
+        value: 6379
+
       - key: MAIL_MAILER
-        value: log
+        value: smtp
+      - key: MAIL_HOST
+        value: mailpit
+      - key: MAIL_PORT
+        value: 1025
+      - key: MAIL_USERNAME
+        value: null
+      - key: MAIL_PASSWORD
+        value: null
+      - key: MAIL_ENCRYPTION
+        value: null
+      - key: MAIL_FROM_ADDRESS
+        value: hello@example.com
+      - key: MAIL_FROM_NAME
+        value: Laravel
+
+      - key: AWS_ACCESS_KEY_ID
+        value: ""
+      - key: AWS_SECRET_ACCESS_KEY
+        value: ""
+      - key: AWS_DEFAULT_REGION
+        value: us-east-1
+      - key: AWS_BUCKET
+        value: ""
+      - key: AWS_USE_PATH_STYLE_ENDPOINT
+        value: false
+
+      - key: PUSHER_APP_ID
+        value: ""
+      - key: PUSHER_APP_KEY
+        value: ""
+      - key: PUSHER_APP_SECRET
+        value: ""
+      - key: PUSHER_HOST
+        value: ""
+      - key: PUSHER_PORT
+        value: 443
+      - key: PUSHER_SCHEME
+        value: https
+      - key: PUSHER_APP_CLUSTER
+        value: mt1
+
+      - key: VITE_APP_NAME
+        value: Laravel
+      - key: VITE_PUSHER_APP_KEY
+        value: ""
+      - key: VITE_PUSHER_HOST
+        value: ""
+      - key: VITE_PUSHER_PORT
+        value: 443
+      - key: VITE_PUSHER_SCHEME
+        value: https
+      - key: VITE_PUSHER_APP_CLUSTER
+        value: mt1
+
       - key: L5_SWAGGER_GENERATE_ALWAYS
         value: true
       - key: L5_SWAGGER_BASE_PATH
-        fromService:
-          type: web
-          name: laravel-banking-api
-          property: host
+        value: http://localhost
       - key: L5_SWAGGER_CONST_HOST
-        fromService:
-          type: web
-          name: laravel-banking-api
-          property: host
+        value: http://localhost
       - key: SANCTUM_STATEFUL_DOMAINS
-        fromService:
-          type: web
-          name: laravel-banking-api
-          property: host
+        value: localhost

@@ -12,7 +12,7 @@ class StoreCompteBancaireRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true; // Pour l'API, on autorise par défaut (géré par les middlewares)
+        return true;
     }
 
     /**
@@ -23,21 +23,16 @@ class StoreCompteBancaireRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Informations client
-            'nom' => 'required|string|max:255|regex:/^[a-zA-ZÀ-ÿ\s\-]+$/',
-            'prenom' => 'required|string|max:255|regex:/^[a-zA-ZÀ-ÿ\s\-]+$/',
-            'email' => 'required|email:rfc,dns|unique:clients,email',
-            'telephone' => ['required', 'string', 'max:20', new ValidNciAndTelephone()],
-            'date_naissance' => 'required|date|before:today|after:1900-01-01',
-            'adresse' => 'nullable|string|max:500',
-            'ville' => 'nullable|string|max:255|regex:/^[a-zA-ZÀ-ÿ\s\-]+$/',
-            'code_postal' => 'nullable|string|regex:/^[0-9]{5}$/',
-            'pays' => 'nullable|string|max:100',
-
-            // Informations compte bancaire
-            'type_compte' => 'sometimes|in:courant,epargne',
-            'devise' => 'sometimes|string|size:3|in:EUR,USD,GBP',
-            'decouvert_autorise' => 'sometimes|numeric|min:0|max:10000',
+            'type' => 'required|string|in:cheque,epargne',
+            'soldeInitial' => 'required|numeric|min:0',
+            'devise' => 'required|string|in:XOF,FCFA,EUR,USD',
+            'solde' => 'required|numeric|min:0',
+            'client' => 'required|array',
+            'client.titulaire' => 'required|string|min:2|max:255',
+            'client.nci' => ['nullable', 'string', new ValidNciAndTelephone()],
+            'client.email' => 'required|email|unique:clients,email',
+            'client.telephone' => ['required', 'string', new ValidNciAndTelephone()],
+            'client.adresse' => 'required|string|min:5|max:500',
         ];
     }
 
@@ -49,25 +44,25 @@ class StoreCompteBancaireRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'nom.required' => 'Le nom du client est obligatoire.',
-            'nom.regex' => 'Le nom ne peut contenir que des lettres, espaces et tirets.',
-            'prenom.required' => 'Le prénom du client est obligatoire.',
-            'prenom.regex' => 'Le prénom ne peut contenir que des lettres, espaces et tirets.',
-            'email.required' => 'L\'email du client est obligatoire.',
-            'email.email' => 'L\'email doit être valide.',
-            'email.unique' => 'Cet email est déjà utilisé par un autre client.',
-            'telephone.required' => 'Le numéro de téléphone est obligatoire.',
-            'date_naissance.required' => 'La date de naissance est obligatoire.',
-            'date_naissance.before' => 'La date de naissance doit être antérieure à aujourd\'hui.',
-            'date_naissance.after' => 'La date de naissance semble incorrecte.',
-            'ville.regex' => 'Le nom de la ville ne peut contenir que des lettres, espaces et tirets.',
-            'code_postal.regex' => 'Le code postal doit contenir exactement 5 chiffres.',
-            'type_compte.in' => 'Le type de compte doit être courant ou épargne.',
-            'devise.size' => 'La devise doit être composée de 3 caractères.',
-            'devise.in' => 'La devise doit être EUR, USD ou GBP.',
-            'decouvert_autorise.numeric' => 'Le découvert autorisé doit être un nombre.',
-            'decouvert_autorise.min' => 'Le découvert autorisé ne peut pas être négatif.',
-            'decouvert_autorise.max' => 'Le découvert autorisé ne peut pas dépasser 10 000 €.',
+            'type.required' => 'Le type de compte est obligatoire.',
+            'type.in' => 'Le type de compte doit être soit "cheque" soit "epargne".',
+            'soldeInitial.required' => 'Le solde initial est obligatoire.',
+            'soldeInitial.numeric' => 'Le solde initial doit être un nombre.',
+            'soldeInitial.min' => 'Le solde initial ne peut pas être négatif.',
+            'devise.required' => 'La devise est obligatoire.',
+            'devise.in' => 'La devise doit être XOF, FCFA, EUR ou USD.',
+            'solde.required' => 'Le solde est obligatoire.',
+            'solde.numeric' => 'Le solde doit être un nombre.',
+            'solde.min' => 'Le solde ne peut pas être négatif.',
+            'client.required' => 'Les informations du client sont obligatoires.',
+            'client.titulaire.required' => 'Le nom du titulaire est obligatoire.',
+            'client.titulaire.min' => 'Le nom du titulaire doit contenir au moins 2 caractères.',
+            'client.email.required' => 'L\'email est obligatoire.',
+            'client.email.email' => 'L\'email doit être valide.',
+            'client.email.unique' => 'Cet email est déjà utilisé.',
+            'client.telephone.required' => 'Le numéro de téléphone est obligatoire.',
+            'client.adresse.required' => 'L\'adresse est obligatoire.',
+            'client.adresse.min' => 'L\'adresse doit contenir au moins 5 caractères.',
         ];
     }
 
@@ -79,27 +74,15 @@ class StoreCompteBancaireRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'nom' => 'nom du client',
-            'prenom' => 'prénom du client',
-            'email' => 'email du client',
-            'telephone' => 'numéro de téléphone',
-            'date_naissance' => 'date de naissance',
-            'code_postal' => 'code postal',
-            'type_compte' => 'type de compte',
-            'decouvert_autorise' => 'découvert autorisé',
+            'type' => 'type de compte',
+            'soldeInitial' => 'solde initial',
+            'devise' => 'devise',
+            'solde' => 'solde',
+            'client.titulaire' => 'nom du titulaire',
+            'client.nci' => 'numéro NCI',
+            'client.email' => 'email',
+            'client.telephone' => 'téléphone',
+            'client.adresse' => 'adresse',
         ];
-    }
-
-    /**
-     * Prepare the data for validation.
-     */
-    protected function prepareForValidation(): void
-    {
-        // Nettoyer le numéro de téléphone
-        if ($this->telephone) {
-            $this->merge([
-                'telephone' => preg_replace('/\s+/', '', $this->telephone),
-            ]);
-        }
     }
 }

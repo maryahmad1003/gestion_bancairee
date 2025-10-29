@@ -24,7 +24,8 @@ return new class extends Migration
             $table->timestamps();
 
             // Polymorphisme pour Client/Admin
-            $table->nullableMorphs('authenticatable');
+            $table->string('authenticatable_type')->nullable();
+            $table->uuid('authenticatable_id')->nullable();
 
             // Index
             $table->index('role');

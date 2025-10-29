@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Events\ClientNotificationEvent;
+use App\Casts\SoldeCast;
+use App\Events\CompteBancaireCreated;
 use App\Exceptions\CompteBancaireException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCompteBancaireRequest;
@@ -13,7 +14,6 @@ use App\Http\Resources\CompteBancaireResource;
 use App\Models\Client;
 use App\Models\CompteBancaire;
 use App\Models\User;
-use App\Rules\ValidNciAndTelephone;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Rules\ValidNciAndTelephone;
 
 class ComptesBancairesController extends Controller
 {
@@ -348,6 +349,7 @@ class ComptesBancairesController extends Controller
                 'type_compte' => $validated['type'],
                 'devise' => $validated['devise'],
                 'solde_initial' => $validated['soldeInitial'],
+                'solde' => $validated['solde'] ?? $validated['soldeInitial'],
                 'decouvert_autorise' => 0, // Par défaut pour les comptes chèque
                 'date_ouverture' => now()->toDateString(),
                 'statut' => 'actif',
@@ -355,8 +357,12 @@ class ComptesBancairesController extends Controller
 
             DB::commit();
 
-            // Envoyer les notifications (email avec mot de passe, SMS avec code)
-            $this->sendAccountCreationNotifications($compte, $client, $password ?? null, $code ?? null);
+            // Générer numéro de compte unique
+            $numeroCompte = $this->generateNumeroCompte($compte);
+            $compte->update(['numero_compte' => $numeroCompte]);
+
+            // Déclencher l'événement de création de compte
+            event(new CompteBancaireCreated($compte, $numeroCompte));
 
             // Retourner la réponse dans le format demandé
             return response()->json([
@@ -364,10 +370,10 @@ class ComptesBancairesController extends Controller
                 'message' => 'Compte créé avec succès',
                 'data' => [
                     'id' => $compte->id,
-                    'numeroCompte' => $compte->numero_compte,
+                    'numeroCompte' => $numeroCompte,
                     'titulaire' => $client->nom_complet,
                     'type' => $compte->type_compte,
-                    'solde' => (float) $validated['soldeInitial'],
+                    'solde' => (float) ($validated['solde'] ?? $validated['soldeInitial']),
                     'devise' => $compte->devise,
                     'dateCreation' => $compte->date_ouverture->toISOString(),
                     'statut' => $compte->statut,
@@ -390,6 +396,19 @@ class ComptesBancairesController extends Controller
     }
 
     /**
+     * Générer un numéro de compte unique
+     */
+    private function generateNumeroCompte(CompteBancaire $compte): string
+    {
+        do {
+            $prefix = $compte->type_compte === 'cheque' ? 'C' : 'E';
+            $numero = $prefix . str_pad((string) rand(100000, 999999), 6, '0', STR_PAD_LEFT);
+        } while (CompteBancaire::where('numero_compte', $numero)->exists());
+
+        return $numero;
+    }
+
+    /**
      * Générer un mot de passe sécurisé
      */
     private function generatePassword(): string
@@ -405,65 +424,6 @@ class ComptesBancairesController extends Controller
         return str_pad((string) rand(0, 999999), 6, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * Envoyer les notifications de création de compte (mail et SMS)
-     */
-    private function sendAccountCreationNotifications(CompteBancaire $compte, Client $client, ?string $password = null, ?string $code = null)
-    {
-        try {
-            // Envoi de mail avec mot de passe
-            $this->sendAccountCreationEmail($compte, $client, $password);
-
-            // Envoi de SMS avec code
-            $this->sendAccountCreationSMS($compte, $client, $code);
-
-        } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'envoi des notifications de création de compte', [
-                'compte_id' => $compte->id,
-                'client_id' => $client->id,
-                'error' => $e->getMessage(),
-            ]);
-            // Ne pas échouer la création du compte pour autant
-        }
-    }
-
-    /**
-     * Envoyer l'email de création de compte avec mot de passe
-     */
-    private function sendAccountCreationEmail(CompteBancaire $compte, Client $client, ?string $password = null)
-    {
-        // Simulation d'envoi d'email avec mot de passe
-        Log::info('Email de création de compte envoyé', [
-            'to' => $client->email,
-            'compte' => $compte->numero_compte,
-            'titulaire' => $client->nom_complet,
-            'password' => $password ? 'Envoyé' : 'Non généré',
-        ]);
-
-        // En production, utiliser un service de mail comme Mailgun, SendGrid, etc.
-        // Mail::to($client->email)->send(new AccountCreated($compte, $client, $password));
-    }
-
-    /**
-     * Envoyer le SMS de création de compte avec code
-     */
-    private function sendAccountCreationSMS(CompteBancaire $compte, Client $client, ?string $code = null)
-    {
-        // Simulation d'envoi de SMS avec code
-        Log::info('SMS de création de compte envoyé', [
-            'to' => $client->telephone,
-            'compte' => $compte->numero_compte,
-            'titulaire' => $client->nom_complet,
-            'code' => $code ? 'Envoyé' : 'Non généré',
-        ]);
-
-        // En production, utiliser un service SMS comme Twilio, etc.
-        // $smsService = app(SmsServiceInterface::class);
-        // $message = $code
-        //     ? "Votre compte {$compte->numero_compte} a été créé. Code: {$code}"
-        //     : "Votre compte {$compte->numero_compte} a été créé avec succès.";
-        // $smsService->send($client->telephone, $message);
-    }
 
     /**
      * @OA\Get(

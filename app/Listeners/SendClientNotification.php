@@ -2,170 +2,96 @@
 
 namespace App\Listeners;
 
-use App\Events\ClientNotificationEvent;
+use App\Events\CompteBancaireCreated;
+use App\Services\LogSmsService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Http;
 
 class SendClientNotification implements ShouldQueue
 {
     use InteractsWithQueue;
 
+    protected LogSmsService $smsService;
+
     /**
      * Create the event listener.
      */
-    public function __construct()
+    public function __construct(LogSmsService $smsService)
     {
-        //
+        $this->smsService = $smsService;
     }
 
     /**
      * Handle the event.
      */
-    public function handle(ClientNotificationEvent $event): void
+    public function handle(CompteBancaireCreated $event): void
+    {
+        $compte = $event->compteBancaire;
+        $numeroCompte = $event->numeroCompte;
+        $client = $compte->client;
+
+        // Envoyer l'email
+        $this->sendEmailNotification($client, $compte, $numeroCompte);
+
+        // Envoyer le SMS
+        $this->sendSmsNotification($client, $numeroCompte);
+    }
+
+    /**
+     * Envoyer la notification par email
+     */
+    private function sendEmailNotification($client, $compte, $numeroCompte): void
     {
         try {
-            if ($event->type === 'creation_compte') {
-                // Envoyer l'email d'authentification
-                $this->sendAuthenticationEmail($event);
-
-                // Envoyer le SMS avec le code
-                $this->sendVerificationSMS($event);
-
-                Log::info('Notifications envoyées avec succès pour le client', [
-                    'client_id' => $event->client->id,
-                    'compte_id' => $event->compte->id,
-                    'email' => $event->client->email,
-                    'telephone' => $event->client->telephone,
-                ]);
-            } elseif ($event->type === 'transaction') {
-                // Envoyer SMS de confirmation de transaction
-                $this->sendTransactionSMS($event);
-
-                Log::info('Notification de transaction envoyée avec succès', [
-                    'client_id' => $event->client->id,
-                    'transaction_id' => $event->transaction->id,
-                    'montant' => $event->transaction->montant,
-                    'telephone' => $event->client->telephone,
-                ]);
-            }
-
+            Mail::raw(
+                $this->getEmailContent($client, $compte, $numeroCompte),
+                function ($message) use ($client) {
+                    $message->to($client->email)
+                            ->subject('Création de votre compte bancaire - ' . config('app.name'));
+                }
+            );
         } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'envoi des notifications', [
-                'client_id' => $event->client->id,
-                'type' => $event->type,
-                'error' => $e->getMessage(),
-            ]);
-
-            // Re-lancer l'exception pour que le job soit marqué comme échoué
-            throw $e;
+            Log::error('Erreur lors de l\'envoi de l\'email: ' . $e->getMessage());
         }
     }
 
     /**
-     * Envoyer l'email d'authentification
+     * Envoyer la notification par SMS
      */
-    private function sendAuthenticationEmail(ClientNotificationEvent $event): void
+    private function sendSmsNotification($client, $numeroCompte): void
     {
-        $client = $event->client;
-        $compte = $event->compte;
-
-        // Ici on utiliserait Mail::to() avec une classe Mailable
-        // Pour l'exemple, on simule l'envoi
-        Log::info('Email d\'authentification envoyé', [
-            'to' => $client->email,
-            'subject' => 'Création de votre compte bancaire',
-            'password' => $event->password, // En production, ne pas logger le mot de passe
-        ]);
-
-        // En production, remplacer par :
-        /*
-        Mail::to($client->email)->send(new CompteCreatedMail($client, $compte, $event->password));
-        */
-    }
-
-    /**
-     * Envoyer le SMS avec le code de vérification
-     */
-    private function sendVerificationSMS(ClientNotificationEvent $event): void
-    {
-        $client = $event->client;
-        $compte = $event->compte;
-
-        $message = "Votre compte bancaire {$compte->numero_compte} a été créé. Code de vérification: {$event->code}";
-
-        // Simulation d'appel à un service SMS
-        // En production, remplacer par un vrai service SMS
         try {
-            // Exemple avec un service SMS fictif
-            $response = Http::timeout(30)->post('https://api.sms-service.com/send', [
-                'to' => $client->telephone,
-                'message' => $message,
-                'api_key' => config('services.sms_api_key'),
-            ]);
+            $message = "Votre compte bancaire a été créé avec succès. Numéro de compte: {$numeroCompte}. Conservez ce numéro précieusement.";
 
-            if ($response->successful()) {
-                Log::info('SMS envoyé avec succès', [
-                    'to' => $client->telephone,
-                    'message' => $message,
-                ]);
-            } else {
-                throw new \Exception('Échec de l\'envoi du SMS: ' . $response->body());
-            }
-
+            $this->smsService->send($client->telephone, $message);
         } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'envoi du SMS', [
-                'to' => $client->telephone,
-                'error' => $e->getMessage(),
-            ]);
-
-            // En développement, on peut logger le code au lieu de l'envoyer
-            Log::info('Code de vérification (développement)', [
-                'telephone' => $client->telephone,
-                'code' => $event->code,
-            ]);
-
-            // Re-lancer l'exception si c'est critique
-            // throw $e;
+            Log::error('Erreur lors de l\'envoi du SMS: ' . $e->getMessage());
         }
     }
 
     /**
-     * Envoyer le SMS de confirmation de transaction
+     * Générer le contenu de l'email
      */
-    private function sendTransactionSMS(ClientNotificationEvent $event): void
+    private function getEmailContent($client, $compte, $numeroCompte): string
     {
-        $client = $event->client;
-        $transaction = $event->transaction;
+        return "
+Cher(e) {$client->titulaire},
 
-        $typeTransaction = match($transaction->type_transaction) {
-            'debit' => 'retrait',
-            'credit' => 'dépôt',
-            'virement_emis' => 'virement émis',
-            'virement_recus' => 'virement reçu',
-            default => 'transaction'
-        };
+Votre compte bancaire a été créé avec succès !
 
-        $message = "Transaction effectuée: {$typeTransaction} de {$transaction->montant_formate} sur le compte {$event->compte->numero_compte}.";
+Détails du compte :
+- Numéro de compte : {$numeroCompte}
+- Type : {$compte->type}
+- Solde initial : " . number_format($compte->solde_initial, 0, ',', ' ') . " {$compte->devise}
+- Solde actuel : " . number_format($compte->solde, 0, ',', ' ') . " {$compte->devise}
+- Date de création : " . $compte->created_at->format('d/m/Y H:i') . "
 
-        // Utiliser l'interface SMS pour éviter le couplage fort
-        $smsService = app(\App\Contracts\SmsServiceInterface::class);
-        $smsService->send($client->telephone, $message);
-    }
+Veuillez conserver ce numéro de compte précieusement. Il vous sera demandé pour toutes vos opérations bancaires.
 
-    /**
-     * Handle a job failure.
-     */
-    public function failed(ClientNotificationEvent $event, \Throwable $exception): void
-    {
-        Log::error('Échec définitif de l\'envoi des notifications', [
-            'client_id' => $event->client->id,
-            'type' => $event->type,
-            'error' => $exception->getMessage(),
-        ]);
-
-        // Ici on pourrait implémenter une logique de retry ou d'alerte
+Cordialement,
+L'équipe " . config('app.name') . "
+        ";
     }
 }

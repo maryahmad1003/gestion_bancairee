@@ -22,6 +22,10 @@ class EventServiceProvider extends ServiceProvider
         \App\Events\ClientNotificationEvent::class => [
             \App\Listeners\SendClientNotification::class,
         ],
+
+        \App\Events\CompteBancaireCreated::class => [
+            \App\Listeners\SendClientNotification::class,
+        ],
     ];
 
     /**
