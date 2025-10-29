@@ -14,7 +14,7 @@ return [
                 /*
                  * Route for accessing api documentation interface
                  */
-                'api' => 'api/documentation',
+                'api' => 'maryvonne/documentation',
             ],
             'paths' => [
                 /*
@@ -70,11 +70,11 @@ return [
             /*
              * Route for accessing parsed swagger annotations.
              */
-            'docs' => 'docs',
+            'docs' => 'maryvonne/docs',
             /*
              * Route for accessing api documentation interface
              */
-            'api' => 'api/documentation',
+            'api' => 'maryvonne/documentation',
 
             /*
              * Route for Oauth2 authentication callback.
@@ -281,7 +281,7 @@ return [
          * Constants which can be used in annotations
          */
         'constants' => [
-            'L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://localhost'),
+            'L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'https://gestion-bancairee-5.onrender.com'),
         ],
     ],
 ];
