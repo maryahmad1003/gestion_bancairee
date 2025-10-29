@@ -15,6 +15,15 @@ class ApiHeadersMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Gérer les requêtes OPTIONS pour CORS
+        if ($request->getMethod() === 'OPTIONS') {
+            return response('', 200)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept')
+                ->header('Access-Control-Max-Age', '86400');
+        }
+
         // Pour les tests, on désactive temporairement la validation des en-têtes
         // Valider les en-têtes requis seulement pour les routes protégées
         $requiredHeaders = [];
@@ -55,8 +64,9 @@ class ApiHeadersMiddleware
         $response = $next($request);
 
         $response->headers->set('Access-Control-Allow-Origin', '*');
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE');
-        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept');
+        $response->headers->set('Access-Control-Max-Age', '86400');
         $response->headers->set('X-API-Version', 'v1');
 
         return $response;
