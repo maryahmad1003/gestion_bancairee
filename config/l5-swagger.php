@@ -32,7 +32,7 @@ return [
                 /*
                  * Edit to include full URL in ui for assets
                  */
-                'use_absolute_path' => env('L5_SWAGGER_USE_ABSOLUTE_PATH', false),
+                'use_absolute_path' => env('L5_SWAGGER_USE_ABSOLUTE_PATH', true),
                 /*
                 * Edit to set path where swagger ui assets should be stored
                 */
@@ -174,8 +174,8 @@ return [
                     'description' => 'Laravel Passport OAuth2 Security',
                     'flows' => [
                         'password' => [
-                            'tokenUrl' => 'https://gestion-bancairee-5.onrender.com/api/v1/auth/login',
-                            'refreshUrl' => 'https://gestion-bancairee-5.onrender.com/api/v1/auth/refresh',
+                            'tokenUrl' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/api/v1/auth/login',
+                            'refreshUrl' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/api/v1/auth/refresh',
                             'scopes' => [
                                 'view_all_clients' => 'Voir tous les clients',
                                 'manage_clients' => 'Gérer les clients',
@@ -206,7 +206,7 @@ return [
          * Set this to `true` in development mode so that docs would be regenerated on each request
          * Set this to `false` to disable swagger generation on production
          */
-        'generate_always' => env('L5_SWAGGER_GENERATE_ALWAYS', true),
+        'generate_always' => env('L5_SWAGGER_GENERATE_ALWAYS', false),
 
         /*
          * Set this to `true` to generate a copy of documentation in yaml format
@@ -217,7 +217,7 @@ return [
          * Edit to trust the proxy's ip address - needed for AWS Load Balancer
          * string[]
          */
-        'proxy' => false,
+        'proxy' => ["*"],
 
         /*
          * Configs plugin allows to fetch external configs instead of passing them to SwaggerUIBundle.

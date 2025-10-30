@@ -29,7 +29,7 @@ class TrustProxies extends Middleware
         Request::HEADER_X_FORWARDED_AWS_ELB;
         
         public function handle($request, \Closure $next ){
-            if (app() -> environment(`production`)){
+            if (app() -> environment('production')){
                 $request->server->set ('HTTPS', 'on');
             }
             return parent::handle($request, $next);
