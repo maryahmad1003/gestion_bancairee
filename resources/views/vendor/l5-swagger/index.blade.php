@@ -144,7 +144,7 @@
 
         const ui = SwaggerUIBundle({
             dom_id: '#swagger-ui',
-            url: "http://localhost:8000/storage/api-docs.json",
+            url: "{!! $urlToDocs !!}",
             operationsSorter: operationsSorter,
             configUrl: configUrl,
             validatorUrl: validatorUrl,

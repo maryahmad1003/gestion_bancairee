@@ -23,14 +23,7 @@ Route::get('/maryvonne/documentation', function () {
     $documentation = 'default';
 
     // Génère l'URL vers le fichier JSON Swagger
-    $urlToDocs = 'http://localhost:8000/storage/api-docs.json';
-
-    // Corrige le protocole selon l’environnement
-    if (app()->environment('production')) {
-        $urlToDocs = preg_replace('#^http:#', 'https:', $urlToDocs);
-    } else {
-        $urlToDocs = preg_replace('#^https:#', 'http:', $urlToDocs);
-    }
+    $urlToDocs = url('storage/api-docs.json');
 
     $operationsSorter = config('l5-swagger.defaults.operations_sort');
     $configUrl = config('l5-swagger.defaults.additional_config_url');

@@ -7,13 +7,13 @@ services:
       - key: APP_NAME
         value: Laravel
       - key: APP_ENV
-        value: local
+        value: production
       - key: APP_KEY
         value: base64:BmopHdpkEyJ71+zT0RiqryPWH7A4HK9D5T/WCy6UKfQ=
       - key: APP_DEBUG
         value: true
       - key: APP_URL
-        value: http://localhost
+        value: https://gestion-bancairee-5.onrender.com
 
       - key: LOG_CHANNEL
         value: stack
@@ -116,8 +116,8 @@ services:
       - key: L5_SWAGGER_GENERATE_ALWAYS
         value: true
       - key: L5_SWAGGER_BASE_PATH
-        value: http://localhost
+        value: https://gestion-bancairee-5.onrender.com
       - key: L5_SWAGGER_CONST_HOST
-        value: http://localhost
+        value: https://gestion-bancairee-5.onrender.com
       - key: SANCTUM_STATEFUL_DOMAINS
-        value: localhost
+        value: localhost,gestion-bancairee-5.onrender.com
