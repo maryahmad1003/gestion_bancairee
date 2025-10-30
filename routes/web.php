@@ -23,7 +23,7 @@ Route::get('/maryvonne/documentation', function () {
     $documentation = 'default';
 
     // Génère l'URL vers le fichier JSON Swagger
-    $urlToDocs = url('storage/api-docs.json');
+    $urlToDocs = env('APP_ENV') === 'production' ? secure_url('storage/api-docs.json') : url('storage/api-docs.json');
 
     $operationsSorter = config('l5-swagger.defaults.operations_sort');
     $configUrl = config('l5-swagger.defaults.additional_config_url');
