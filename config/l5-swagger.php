@@ -5,9 +5,7 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'Gestion Bancaire API',
-                'description' => 'API de gestion bancaire pour les opérations clients et comptes',
-                'version' => '1.0.0',
+                'title' => 'L5 Swagger UI',
             ],
 
             'routes' => [
@@ -18,50 +16,36 @@ return [
             ],
             'paths' => [
                 /*
-                 * Absolute path to location where parsed annotations will be stored
-                 */
-                'docs' => storage_path('api-docs'),
-                /*
-                 * Absolute path to directory where to export views
-                 */
-                'views' => base_path('resources/views/vendor/l5-swagger'),
-                /*
-                 * Edit to set the api's base path
-                 */
-                'base' => env('L5_SWAGGER_BASE_PATH', null),
-                /*
                  * Edit to include full URL in ui for assets
                  */
                 'use_absolute_path' => env('L5_SWAGGER_USE_ABSOLUTE_PATH', true),
+
                 /*
                 * Edit to set path where swagger ui assets should be stored
                 */
-                'swagger_ui_assets_path' => env('L5_SWAGGER_UI_ASSETS_PATH', 'vendor/swagger-api/swagger-ui/dist/'),
+                'swagger_ui_assets_path' => env('L5_SWAGGER_UI_ASSETS_PATH', 'https://unpkg.com/swagger-ui-dist@5.10.3/'),
+
                 /*
                  * File name of the generated json documentation file
                  */
                 'docs_json' => 'api-docs.json',
+
                 /*
                  * File name of the generated YAML documentation file
                  */
                 'docs_yaml' => 'api-docs.yaml',
+
                 /*
                  * Set this to `json` or `yaml` to determine which documentation file to use in UI
                  */
                 'format_to_use_for_docs' => env('L5_FORMAT_TO_USE_FOR_DOCS', 'json'),
+
                 /*
                  * Absolute paths to directory containing the swagger annotations are stored.
                  */
                 'annotations' => [
-                    base_path('app/Swagger'),
-                    base_path('app/Http/Controllers'),
+                    base_path('app'),
                 ],
-                /*
-                 * Absolute path to directories that should be excluded from scanning
-                 * @deprecated Please use `scanOptions.exclude`
-                 * `scanOptions.exclude` overwrites this
-                 */
-                'excludes' => [],
             ],
         ],
     ],
@@ -70,11 +54,7 @@ return [
             /*
              * Route for accessing parsed swagger annotations.
              */
-            'docs' => 'maryvonne/documentation',
-            /*
-             * Route for accessing api documentation interface
-             */
-            'api' => 'maryvonne/documentation',
+            'docs' => 'docs',
 
             /*
              * Route for Oauth2 authentication callback.
@@ -97,21 +77,48 @@ return [
             'group_options' => [],
         ],
 
+        'paths' => [
+            /*
+             * Absolute path to location where parsed annotations will be stored
+             */
+            'docs' => public_path('api-docs'),
+
+            /*
+             * Absolute path to directory where to export views
+             */
+            'views' => base_path('resources/views/vendor/l5-swagger'),
+
+            /*
+             * Edit to set the api's base path
+             */
+            'base' => env('L5_SWAGGER_BASE_PATH', null),
+
+            /*
+             * Absolute path to directories that should be excluded from scanning
+             * @deprecated Please use `scanOptions.exclude`
+             * `scanOptions.exclude` overwrites this
+             */
+            'excludes' => [],
+        ],
 
         'scanOptions' => [
-        /**
-         * Configuration for default processors. Allows to pass processors configuration to swagger-php.
-         *
-         * @link https://zircote.github.io/swagger-php/reference/processors.html
-         */
-        'default_processors_configuration' => [
-            // 'pathFilter' => [
-            //     'tags' => [
-            //         '/Utilisateurs/',
-            //         '/Comptes Bancaires/',
-            //     ],
-            // ],
-        ],
+            /**
+             * Configuration for default processors. Allows to pass processors configuration to swagger-php.
+             *
+             * @link https://zircote.github.io/swagger-php/reference/processors.html
+             */
+            'default_processors_configuration' => [
+            /** Example */
+            /**
+             * 'operationId.hash' => true,
+             * 'pathFilter' => [
+             * 'tags' => [
+             * '/pets/',
+             * '/store/',
+             * ],
+             * ],.
+             */
+            ],
 
             /**
              * analyser: defaults to \OpenApi\StaticAnalyser .
@@ -163,41 +170,65 @@ return [
         */
         'securityDefinitions' => [
             'securitySchemes' => [
-                'bearerAuth' => [
-                    'type' => 'http',
-                    'scheme' => 'bearer',
-                    'bearerFormat' => 'JWT',
-                    'description' => 'Enter token in format (Bearer <token>)',
+                /*
+                 * Examples of Security schemes
+                 */
+                /*
+                'api_key_security_example' => [ // Unique name of security
+                    'type' => 'apiKey', // The type of the security scheme. Valid values are "basic", "apiKey" or "oauth2".
+                    'description' => 'A short description for security scheme',
+                    'name' => 'api_key', // The name of the header or query parameter to be used.
+                    'in' => 'header', // The location of the API key. Valid values are "query" or "header".
                 ],
-                'passport' => [
-                    'type' => 'oauth2',
-                    'description' => 'Laravel Passport OAuth2 Security',
+                'oauth2_security_example' => [ // Unique name of security
+                    'type' => 'oauth2', // The type of the security scheme. Valid values are "basic", "apiKey" or "oauth2".
+                    'description' => 'A short description for oauth2 security scheme.',
+                    'flow' => 'implicit', // The flow used by the OAuth2 security scheme. Valid values are "implicit", "password", "application" or "accessCode".
+                    'authorizationUrl' => 'http://example.com/auth', // The authorization URL to be used for (implicit/accessCode)
+                    //'tokenUrl' => 'http://example.com/auth' // The authorization URL to be used for (password/application/accessCode)
+                    'scopes' => [
+                        'read:projects' => 'read your projects',
+                        'write:projects' => 'modify projects in your account',
+                    ]
+                ],
+                */
+
+                /* Open API 3.0 support
+                'passport' => [ // Unique name of security
+                    'type' => 'oauth2', // The type of the security scheme. Valid values are "basic", "apiKey" or "oauth2".
+                    'description' => 'Laravel passport oauth2 security.',
+                    'in' => 'header',
+                    'scheme' => 'https',
                     'flows' => [
-                        'password' => [
-                            'tokenUrl' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/api/v1/auth/login',
-                            'refreshUrl' => env('L5_SWAGGER_CONST_HOST', 'http://localhost:8000') . '/api/v1/auth/refresh',
-                            'scopes' => [
-                                'view_all_clients' => 'Voir tous les clients',
-                                'manage_clients' => 'Gérer les clients',
-                                'view_all_accounts' => 'Voir tous les comptes',
-                                'manage_accounts' => 'Gérer les comptes',
-                                'view_all_transactions' => 'Voir toutes les transactions',
-                                'manage_transactions' => 'Gérer les transactions',
-                                'archive_accounts' => 'Archiver les comptes',
-                                'view_logs' => 'Voir les logs',
-                                'manage_users' => 'Gérer les utilisateurs',
-                                'view_own_accounts' => 'Voir ses propres comptes',
-                                'manage_own_accounts' => 'Gérer ses propres comptes',
-                                'view_own_transactions' => 'Voir ses propres transactions',
-                                'create_transactions' => 'Créer des transactions',
-                            ],
+                        "password" => [
+                            "authorizationUrl" => config('app.url') . '/oauth/authorize',
+                            "tokenUrl" => config('app.url') . '/oauth/token',
+                            "refreshUrl" => config('app.url') . '/token/refresh',
+                            "scopes" => []
                         ],
                     ],
                 ],
+                'sanctum' => [ // Unique name of security
+                    'type' => 'apiKey', // Valid values are "basic", "apiKey" or "oauth2".
+                    'description' => 'Enter token in format (Bearer <token>)',
+                    'name' => 'Authorization', // The name of the header or query parameter to be used.
+                    'in' => 'header', // The location of the API key. Valid values are "query" or "header".
+                ],
+                */
             ],
             'security' => [
+                /*
+                 * Examples of Securities
+                 */
                 [
-                    'bearerAuth' => [],
+                    /*
+                    'oauth2_security_example' => [
+                        'read',
+                        'write'
+                    ],
+
+                    'passport' => []
+                    */
                 ],
             ],
         ],
@@ -211,13 +242,13 @@ return [
         /*
          * Set this to `true` to generate a copy of documentation in yaml format
          */
-        'generate_yaml_copy' => env('L5_SWAGGER_GENERATE_YAML_COPY', true),
+        'generate_yaml_copy' => env('L5_SWAGGER_GENERATE_YAML_COPY', false),
 
         /*
          * Edit to trust the proxy's ip address - needed for AWS Load Balancer
          * string[]
          */
-        'proxy' => ["*"],
+        'proxy' => false,
 
         /*
          * Configs plugin allows to fetch external configs instead of passing them to SwaggerUIBundle.
@@ -281,7 +312,7 @@ return [
          * Constants which can be used in annotations
          */
         'constants' => [
-            'L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'https://gestion-bancairee-5.onrender.com'),
+            'L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://my-default-host.com'),
         ],
     ],
 ];

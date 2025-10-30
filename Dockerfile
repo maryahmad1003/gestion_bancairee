@@ -85,7 +85,9 @@ RUN echo "APP_NAME=Laravel" > .env && \
     echo "VITE_PUSHER_SCHEME=https" >> .env && \
     echo "VITE_PUSHER_APP_CLUSTER=mt1" >> .env && \
     echo "" >> .env && \
-    echo "L5_SWAGGER_CONST_HOST=http://localhost:8000" >> .env
+    echo "L5_SWAGGER_CONST_HOST=http://localhost:8000" >> .env && \
+    echo "L5_SWAGGER_UI_ASSETS_PATH=https://unpkg.com/swagger-ui-dist@5.10.3/" >> .env && \
+    echo "L5_SWAGGER_USE_ABSOLUTE_PATH=true" >> .env
 
 RUN chown laravel:laravel .env
 
@@ -100,7 +102,8 @@ USER root
 # Copier le fichier Swagger généré vers public/storage
 RUN mkdir -p public/storage && \
     cp storage/api-docs/api-docs.json public/storage/api-docs.json && \
-    chmod 644 public/storage/api-docs.json
+    chmod 644 public/storage/api-docs.json && \
+    ln -sf public/storage/api-docs.json storage/api-docs/api-docs.json
 
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
