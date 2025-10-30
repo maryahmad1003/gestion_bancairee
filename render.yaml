@@ -121,3 +121,5 @@ services:
         value: https://gestion-bancairee-5.onrender.com
       - key: SANCTUM_STATEFUL_DOMAINS
         value: localhost,gestion-bancairee-5.onrender.com
+      - key: L5_SWAGGER_USE_ABSOLUTE_PATH 
+        value: true
