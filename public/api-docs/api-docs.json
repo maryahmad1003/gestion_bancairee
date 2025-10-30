@@ -506,6 +506,196 @@
                         "bearerAuth": []
                     }
                 ]
+            },
+            "delete": {
+                "tags": [
+                    "Comptes Bancaires"
+                ],
+                "summary": "Supprimer un compte bancaire",
+                "description": "Supprime un compte bancaire du système. Seuls les comptes non bloqués peuvent être supprimés. Les comptes bloqués doivent être débloqués avant suppression. Si le compte est déjà supprimé (soft delete), il sera supprimé définitivement.",
+                "operationId": "deleteCompteBancaire",
+                "parameters": [
+                    {
+                        "name": "compte_bancaire",
+                        "in": "path",
+                        "description": "ID du compte bancaire à supprimer",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Compte bancaire supprimé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Compte bancaire supprimé avec succès"
+                                        },
+                                        "timestamp": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Compte non trouvé"
+                    },
+                    "403": {
+                        "description": "Accès non autorisé"
+                    },
+                    "400": {
+                        "description": "Impossible de supprimer le compte (compte bloqué ou solde non nul)"
+                    },
+                    "500": {
+                        "description": "Erreur serveur"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/comptes/{compte_bancaire}/bloquer": {
+            "post": {
+                "tags": [
+                    "Comptes Bancaires"
+                ],
+                "summary": "Bloquer un compte épargne",
+                "description": "Bloque un compte épargne actif pour une durée déterminée. Seuls les comptes épargne actifs peuvent être bloqués.",
+                "operationId": "bloquerCompteEpargne",
+                "parameters": [
+                    {
+                        "name": "compte_bancaire",
+                        "in": "path",
+                        "description": "ID du compte bancaire",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "motif",
+                                    "duree",
+                                    "unite"
+                                ],
+                                "properties": {
+                                    "motif": {
+                                        "description": "Motif du blocage",
+                                        "type": "string",
+                                        "example": "Activité suspecte détectée"
+                                    },
+                                    "duree": {
+                                        "description": "Durée du blocage",
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "example": 30
+                                    },
+                                    "unite": {
+                                        "description": "Unité de la durée",
+                                        "type": "string",
+                                        "enum": [
+                                            "jours",
+                                            "mois"
+                                        ],
+                                        "example": "mois"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Compte bloqué avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Compte bloqué avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid",
+                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                },
+                                                "statut": {
+                                                    "type": "string",
+                                                    "example": "bloque"
+                                                },
+                                                "motifBlocage": {
+                                                    "type": "string",
+                                                    "example": "Activité suspecte détectée"
+                                                },
+                                                "dateBlocage": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2025-10-19T11:20:00Z"
+                                                },
+                                                "dateDeblocagePrevue": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2025-11-18T11:20:00Z"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "timestamp": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Données invalides ou compte ne peut pas être bloqué"
+                    },
+                    "404": {
+                        "description": "Compte non trouvé"
+                    },
+                    "500": {
+                        "description": "Erreur serveur"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         }
     },
@@ -831,12 +1021,50 @@
                 },
                 "type": "object"
             }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "Enter token in format (Bearer <token>)"
+            },
+            "passport": {
+                "type": "oauth2",
+                "description": "Laravel Passport OAuth2 Security",
+                "flows": {
+                    "password": {
+                        "tokenUrl": "https://gestion-bancairee-5.onrender.com/api/v1/auth/login",
+                        "refreshUrl": "https://gestion-bancairee-5.onrender.com/api/v1/auth/refresh",
+                        "scopes": {
+                            "view_all_clients": "Voir tous les clients",
+                            "manage_clients": "Gérer les clients",
+                            "view_all_accounts": "Voir tous les comptes",
+                            "manage_accounts": "Gérer les comptes",
+                            "view_all_transactions": "Voir toutes les transactions",
+                            "manage_transactions": "Gérer les transactions",
+                            "archive_accounts": "Archiver les comptes",
+                            "view_logs": "Voir les logs",
+                            "manage_users": "Gérer les utilisateurs",
+                            "view_own_accounts": "Voir ses propres comptes",
+                            "manage_own_accounts": "Gérer ses propres comptes",
+                            "view_own_transactions": "Voir ses propres transactions",
+                            "create_transactions": "Créer des transactions"
+                        }
+                    }
+                }
+            }
         }
     },
     "tags": [
         {
             "name": "Comptes Bancaires",
             "description": "Gestion des comptes bancaires"
+        }
+    ],
+    "security": [
+        {
+            "bearerAuth": []
         }
     ]
 }
