@@ -103,7 +103,7 @@ USER root
 RUN mkdir -p public/storage && \
     php artisan l5-swagger:generate && \
     cp storage/api-docs/api-docs.json public/storage/api-docs.json && \
-    chmod 644 public/storage/api-docs.json
+    chmod 644 public/storage/api-docs.json || true
 
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
