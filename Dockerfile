@@ -99,11 +99,11 @@ RUN php artisan key:generate --force && \
     php artisan l5-swagger:generate
 USER root
 
-# Copier le fichier Swagger généré vers public/storage
+# Générer la documentation Swagger et la copier vers public/storage
 RUN mkdir -p public/storage && \
+    php artisan l5-swagger:generate && \
     cp storage/api-docs/api-docs.json public/storage/api-docs.json && \
-    chmod 644 public/storage/api-docs.json && \
-    ln -sf public/storage/api-docs.json storage/api-docs/api-docs.json
+    chmod 644 public/storage/api-docs.json
 
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
