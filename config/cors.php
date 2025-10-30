@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => ['http://localhost:8000', 'https://localhost:8000', 'https://gestion-bancairee-5.onrender.com'],
 
     'allowed_origins_patterns' => [],
 

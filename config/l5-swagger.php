@@ -46,6 +46,13 @@ return [
                 'annotations' => [
                     base_path('app'),
                 ],
+
+                /*
+                 * URL for the JSON documentation file
+                 */
+                'docs_json_url' => env('APP_ENV') === 'production'
+                    ? 'https://gestion-bancairee-5.onrender.com/docs'
+                    : 'http://localhost:8000/maryvonne/docs',
             ],
         ],
     ],

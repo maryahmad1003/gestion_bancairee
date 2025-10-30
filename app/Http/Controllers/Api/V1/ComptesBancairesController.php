@@ -237,7 +237,7 @@ class ComptesBancairesController extends Controller
      * @OA\Post(
      *     path="/comptes",
      *     summary="Créer un compte bancaire",
-     *     description="Crée un compte bancaire pour un client existant ou nouveau. Génère automatiquement numéro de compte, mot de passe et code.",
+     *     description="Crée un compte bancaire pour un client existant ou nouveau. Génère automatiquement numéro de compte, mot de passe et code. Envoie un mail et un SMS de confirmation.",
      *     operationId="createCompte",
      *     tags={"Comptes Bancaires"},
      *     security={{"bearerAuth":{}}},
@@ -364,6 +364,31 @@ class ComptesBancairesController extends Controller
             // Déclencher l'événement de création de compte
             event(new CompteBancaireCreated($compte, $numeroCompte));
 
+            // Envoyer mail et SMS de confirmation
+            try {
+                // Envoi du mail
+                Mail::raw("Votre compte bancaire {$numeroCompte} a été créé avec succès. Solde initial: {$validated['soldeInitial']} {$validated['devise']}.", function ($message) use ($client) {
+                    $message->to($client->email)
+                            ->subject('Création de votre compte bancaire');
+                });
+
+                // Envoi du SMS
+                $smsService = app(\App\Contracts\SmsServiceInterface::class);
+                $smsService->send($client->telephone, "Votre compte bancaire {$numeroCompte} a été créé avec succès. Solde initial: {$validated['soldeInitial']} {$validated['devise']}.");
+
+                Log::info('Mail et SMS envoyés pour création de compte', [
+                    'numero_compte' => $numeroCompte,
+                    'client_email' => $client->email,
+                    'client_telephone' => $client->telephone,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de l\'envoi du mail ou SMS de confirmation', [
+                    'numero_compte' => $numeroCompte,
+                    'error' => $e->getMessage(),
+                ]);
+                // Ne pas échouer la création du compte pour autant
+            }
+
             // Retourner la réponse dans le format demandé
             return response()->json([
                 'success' => true,
@@ -473,10 +498,11 @@ class ComptesBancairesController extends Controller
 
         // Selon US: Si le compte épargne est archivé, récupérer depuis Neon
         if ($compte_bancaire->type_compte === 'epargne' && $compte_bancaire->est_archive) {
-            // Simulation de récupération depuis Neon
-            $neonData = $this->getArchivedSavingsAccountFromNeon($compte_bancaire->id);
-            if ($neonData) {
-                $data = $data->additional($neonData);
+            // Récupération depuis Neon
+            $neonService = app(\App\Services\NeonDatabaseService::class);
+            $neonData = $neonService->retrieve('comptes_epargne_archives', ['id' => $compte_bancaire->id]);
+            if (!empty($neonData)) {
+                $data = $data->additional($neonData[0]);
             }
         }
 
@@ -505,39 +531,17 @@ class ComptesBancairesController extends Controller
 
         // Selon US: Si le compte épargne est archivé, récupérer depuis Neon
         if ($compte_bancaire->type_compte === 'epargne' && $compte_bancaire->est_archive) {
-            $neonData = $this->getArchivedSavingsAccountFromNeon($compte_bancaire->id);
-            if ($neonData) {
-                $data = $data->additional($neonData);
+            // Récupération depuis Neon
+            $neonService = app(\App\Services\NeonDatabaseService::class);
+            $neonData = $neonService->retrieve('comptes_epargne_archives', ['id' => $compte_bancaire->id]);
+            if (!empty($neonData)) {
+                $data = $data->additional($neonData[0]);
             }
         }
 
         return $this->successResponse($data, 'Compte bancaire récupéré avec succès');
     }
 
-    /**
-     * Récupérer un compte épargne archivé depuis Neon
-     */
-    private function getArchivedSavingsAccountFromNeon($compteId)
-    {
-        try {
-            // Simulation d'appel à Neon
-            // En production, remplacer par un vrai appel API
-            $response = Http::timeout(30)->get(config('services.neon_api_url') . '/archived-accounts/' . $compteId, [
-                'api_key' => config('services.neon_api_key'),
-            ]);
-
-            if ($response->successful()) {
-                return $response->json()['data'] ?? null;
-            }
-        } catch (\Exception $e) {
-            Log::error('Erreur lors de la récupération du compte archivé depuis Neon', [
-                'compte_id' => $compteId,
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        return null;
-    }
 
     /**
      * Récupérer un client par numéro de téléphone
@@ -702,50 +706,6 @@ class ComptesBancairesController extends Controller
 
     /**
      * Bloquer un compte épargne
-     *
-     * @OA\Post(
-     *     path="/comptes/{compte_bancaire}/bloquer",
-     *     summary="Bloquer un compte épargne",
-     *     description="Bloque un compte épargne actif pour une durée déterminée. Seuls les comptes épargne actifs peuvent être bloqués.",
-     *     operationId="bloquerCompteEpargne",
-     *     tags={"Comptes Bancaires"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="compte_bancaire",
-     *         in="path",
-     *         required=true,
-     *         description="ID du compte bancaire",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"motif", "duree", "unite"},
-     *             @OA\Property(property="motif", type="string", example="Activité suspecte détectée", description="Motif du blocage"),
-     *             @OA\Property(property="duree", type="integer", example=30, description="Durée du blocage", minimum=1),
-     *             @OA\Property(property="unite", type="string", enum={"jours", "mois"}, example="mois", description="Unité de la durée")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Compte bloqué avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Compte bloqué avec succès"),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *                 @OA\Property(property="statut", type="string", example="bloque"),
-     *                 @OA\Property(property="motifBlocage", type="string", example="Activité suspecte détectée"),
-     *                 @OA\Property(property="dateBlocage", type="string", format="date-time", example="2025-10-19T11:20:00Z"),
-     *                 @OA\Property(property="dateDeblocagePrevue", type="string", format="date-time", example="2025-11-18T11:20:00Z")
-     *             ),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
-     *         )
-     *     ),
-     *     @OA\Response(response=400, description="Données invalides ou compte ne peut pas être bloqué"),
-     *     @OA\Response(response=404, description="Compte non trouvé"),
-     *     @OA\Response(response=500, description="Erreur serveur")
-     * )
      */
      public function bloquer(Request $request, $id)
      {
@@ -818,309 +778,11 @@ class ComptesBancairesController extends Controller
          }
      }
 
-    /**
-     * Débloquer un compte épargne
-     *
-     * @OA\Post(
-     *     path="/comptes/{compte_bancaire}/debloquer",
-     *     summary="Débloquer un compte épargne",
-     *     description="Débloque un compte épargne qui était bloqué.",
-     *     operationId="debloquerCompteEpargne",
-     *     tags={"Comptes Bancaires"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="compte_bancaire",
-     *         in="path",
-     *         required=true,
-     *         description="ID du compte bancaire",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Compte débloqué avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Compte débloqué avec succès"),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *                 @OA\Property(property="statut", type="string", example="actif"),
-     *                 @OA\Property(property="motifBlocage", type="string", nullable=true, example=null),
-     *                 @OA\Property(property="dateBlocage", type="string", format="date-time", nullable=true, example=null),
-     *                 @OA\Property(property="dateDeblocagePrevue", type="string", format="date-time", nullable=true, example=null)
-     *             ),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
-     *         )
-     *     ),
-     *     @OA\Response(response=400, description="Le compte n'est pas bloqué"),
-     *     @OA\Response(response=404, description="Compte non trouvé"),
-     *     @OA\Response(response=500, description="Erreur serveur")
-     * )
-     */
-     public function debloquer($id)
-     {
-         // Pour les tests, on utilise l'ID directement
-         $compte_bancaire = CompteBancaire::findOrFail($id);
 
-         if (!$compte_bancaire->getEstBloqueAttribute()) {
-             return $this->errorResponse('Le compte n\'est pas bloqué.', 400);
-         }
 
-         try {
-             $result = $compte_bancaire->debloquer();
-
-             if ($result) {
-                 Log::info('Compte épargne débloqué via API', [
-                     'numero_compte' => $compte_bancaire->numero_compte,
-                 ]);
-
-                 // Retourner la réponse dans le format demandé (comme pour le blocage)
-                 return response()->json([
-                     'success' => true,
-                     'message' => 'Compte débloqué avec succès',
-                     'data' => [
-                         'id' => $compte_bancaire->id,
-                         'statut' => 'actif',
-                         'motifBlocage' => null,
-                         'dateBlocage' => null,
-                         'dateDeblocagePrevue' => null,
-                     ],
-                     'timestamp' => now()->toISOString(),
-                 ]);
-             } else {
-                 return $this->errorResponse('Échec du déblocage du compte.', 500);
-             }
-         } catch (\Exception $e) {
-             Log::error('Erreur lors du déblocage du compte épargne via API', [
-                 'numero_compte' => $compte_bancaire->numero_compte,
-                 'error' => $e->getMessage(),
-             ]);
-
-             return $this->errorResponse('Erreur lors du déblocage du compte.', 500);
-         }
-     }
 
     /**
-     * Archiver un compte bancaire
-     *
-     * @OA\Post(
-     *     path="/comptes/{compte_bancaire}/archiver",
-     *     summary="Archiver un compte bancaire",
-     *     description="Archive un compte bancaire. Seuls les comptes actifs peuvent être archivés.",
-     *     operationId="archiverCompteBancaire",
-     *     tags={"Comptes Bancaires"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="compte_bancaire",
-     *         in="path",
-     *         required=true,
-     *         description="ID du compte bancaire",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"motif"},
-     *             @OA\Property(property="motif", type="string", example="Archivage demandé par le client", description="Motif de l'archivage")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Compte archivé avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(property="data", ref="#/components/schemas/CompteBancaire"),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
-     *         )
-     *     ),
-     *     @OA\Response(response=400, description="Données invalides ou compte ne peut pas être archivé"),
-     *     @OA\Response(response=404, description="Compte non trouvé"),
-     *     @OA\Response(response=500, description="Erreur serveur")
-     * )
-     */
-    public function archiver(Request $request, $id)
-    {
-        // Pour les tests, on utilise l'ID directement
-        $compte_bancaire = CompteBancaire::findOrFail($id);
-
-        // Validation des données
-        $validated = $request->validate([
-            'motif' => 'required|string|max:255',
-        ]);
-
-        // Selon US: Archivage - Seul les comptes épargne bloqués dont la date de début de blocage est échue peuvent être archivés
-        if ($compte_bancaire->type_compte !== 'epargne') {
-            return $this->errorResponse('Seuls les comptes épargne peuvent être archivés.', 400);
-        }
-
-        if (!$compte_bancaire->getEstBloqueAttribute()) {
-            return $this->errorResponse('Le compte doit être bloqué pour être archivé.', 400);
-        }
-
-        if ($compte_bancaire->est_archive) {
-            return $this->errorResponse('Le compte est déjà archivé.', 400);
-        }
-
-        // Vérifier que la date de début de blocage est échue
-        if ($compte_bancaire->date_debut_blocage && $compte_bancaire->date_debut_blocage->isFuture()) {
-            return $this->errorResponse('La date de début de blocage n\'est pas encore échue.', 400);
-        }
-
-        try {
-            $result = $compte_bancaire->archiver($validated['motif']);
-
-            if ($result) {
-                Log::info('Compte bancaire archivé via API', [
-                    'numero_compte' => $compte_bancaire->numero_compte,
-                    'type_compte' => $compte_bancaire->type_compte,
-                    'motif' => $validated['motif'],
-                    'date_archivage' => $compte_bancaire->date_archivage,
-                ]);
-
-                // Retourner la réponse dans le format demandé (comme pour le blocage/déblocage)
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Compte archivé avec succès',
-                    'data' => [
-                        'id' => $compte_bancaire->id,
-                        'statut' => $compte_bancaire->statut,
-                        'motifBlocage' => $compte_bancaire->motif_blocage,
-                        'dateBlocage' => $compte_bancaire->date_debut_blocage?->toISOString(),
-                        'dateDeblocagePrevue' => $compte_bancaire->date_fin_blocage?->toISOString(),
-                    ],
-                    'timestamp' => now()->toISOString(),
-                ]);
-            } else {
-                return $this->errorResponse('Échec de l\'archivage du compte.', 500);
-            }
-        } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'archivage du compte bancaire via API', [
-                'numero_compte' => $compte_bancaire->numero_compte,
-                'error' => $e->getMessage(),
-            ]);
-
-            return $this->errorResponse('Erreur lors de l\'archivage du compte.', 500);
-        }
-    }
-
-    /**
-     * Désarchiver un compte bancaire
-     *
-     * @OA\Post(
-     *     path="/comptes/{compte_bancaire}/desarchiver",
-     *     summary="Désarchiver un compte bancaire",
-     *     description="Désarchive un compte bancaire archivé.",
-     *     operationId="desarchiverCompteBancaire",
-     *     tags={"Comptes Bancaires"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="compte_bancaire",
-     *         in="path",
-     *         required=true,
-     *         description="ID du compte bancaire",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Compte désarchivé avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(property="data", ref="#/components/schemas/CompteBancaire"),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
-     *         )
-     *     ),
-     *     @OA\Response(response=400, description="Le compte n'est pas archivé"),
-     *     @OA\Response(response=404, description="Compte non trouvé"),
-     *     @OA\Response(response=500, description="Erreur serveur")
-     * )
-     */
-    public function desarchiver($id)
-    {
-        // Pour les tests, on utilise l'ID directement
-        $compte_bancaire = CompteBancaire::findOrFail($id);
-
-        // Selon US: Désarchivage - Seul les comptes épargne bloqués dont la date de fin de blocage est échue peuvent être désarchivés
-        if ($compte_bancaire->type_compte !== 'epargne') {
-            return $this->errorResponse('Seuls les comptes épargne peuvent être désarchivés.', 400);
-        }
-
-        if (!$compte_bancaire->getEstBloqueAttribute()) {
-            return $this->errorResponse('Le compte doit être bloqué pour être désarchivé.', 400);
-        }
-
-        if (!$compte_bancaire->est_archive) {
-            return $this->errorResponse('Le compte n\'est pas archivé.', 400);
-        }
-
-        // Vérifier que la date de fin de blocage est échue
-        if ($compte_bancaire->date_fin_blocage && $compte_bancaire->date_fin_blocage->isFuture()) {
-            return $this->errorResponse('La date de fin de blocage n\'est pas encore échue.', 400);
-        }
-
-        try {
-            $result = $compte_bancaire->desarchiver();
-
-            if ($result) {
-                Log::info('Compte bancaire désarchivé via API', [
-                    'numero_compte' => $compte_bancaire->numero_compte,
-                ]);
-
-                // Retourner la réponse dans le format demandé (comme pour le blocage/déblocage)
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Compte désarchivé avec succès',
-                    'data' => [
-                        'id' => $compte_bancaire->id,
-                        'statut' => $compte_bancaire->statut,
-                        'motifBlocage' => $compte_bancaire->motif_blocage,
-                        'dateBlocage' => $compte_bancaire->date_debut_blocage?->toISOString(),
-                        'dateDeblocagePrevue' => $compte_bancaire->date_fin_blocage?->toISOString(),
-                    ],
-                    'timestamp' => now()->toISOString(),
-                ]);
-            } else {
-                return $this->errorResponse('Échec du désarchivage du compte.', 500);
-            }
-        } catch (\Exception $e) {
-            Log::error('Erreur lors du désarchivage du compte bancaire via API', [
-                'numero_compte' => $compte_bancaire->numero_compte,
-                'error' => $e->getMessage(),
-            ]);
-
-            return $this->errorResponse('Erreur lors du désarchivage du compte.', 500);
-        }
-    }
-
-    /**
-     * @OA\Delete(
-     *     path="/comptes/{compte_bancaire}",
-     *     summary="Supprimer un compte bancaire",
-     *     description="Supprime un compte bancaire du système. Seuls les comptes non bloqués peuvent être supprimés. Les comptes bloqués doivent être débloqués avant suppression. Si le compte est déjà supprimé (soft delete), il sera supprimé définitivement.",
-     *     operationId="deleteCompteBancaire",
-     *     tags={"Comptes Bancaires"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="compte_bancaire",
-     *         in="path",
-     *         required=true,
-     *         description="ID du compte bancaire à supprimer",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Compte bancaire supprimé avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Compte bancaire supprimé avec succès"),
-     *             @OA\Property(property="timestamp", type="string", format="date-time")
-     *         )
-     *     ),
-     *     @OA\Response(response=404, description="Compte non trouvé"),
-     *     @OA\Response(response=403, description="Accès non autorisé"),
-     *     @OA\Response(response=400, description="Impossible de supprimer le compte (compte bloqué ou solde non nul)"),
-     *     @OA\Response(response=500, description="Erreur serveur")
-     * )
+     * Supprimer un compte bancaire
      */
      public function destroy($id)
      {
@@ -1154,6 +816,11 @@ class ComptesBancairesController extends Controller
          // Selon US: Supprimer compte - Seul les comptes actifs peuvent être supprimés
          if ($compte_bancaire->statut !== 'actif') {
              return $this->errorResponse('Seul un compte actif peut être supprimé.', 400);
+         }
+
+         // Vérifier que le solde est nul avant suppression
+         if ($compte_bancaire->solde != 0) {
+             return $this->errorResponse('Le compte doit avoir un solde nul pour être supprimé.', 400);
          }
  
          // Vérifier si le compte est bloqué

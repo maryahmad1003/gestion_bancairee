@@ -144,7 +144,7 @@
 
         const ui = SwaggerUIBundle({
             dom_id: '#swagger-ui',
-            url: "https://gestion-bancairee-5.onrender.com/docs?api-docs.json",
+            url: "{{ $urlToDocs }}",
             operationsSorter: operationsSorter,
             configUrl: configUrl,
             validatorUrl: validatorUrl,
