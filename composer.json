@@ -12,6 +12,7 @@
         "laravel/passport": "^12.4",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
+        "mailjet/laravel-mailjet": "^3.1",
         "spatie/laravel-rate-limited-job-middleware": "^2.8"
     },
     "require-dev": {

@@ -51,7 +51,7 @@ return [
                  * URL for the JSON documentation file
                  */
                 'docs_json_url' => env('APP_ENV') === 'production'
-                    ? 'https://gestion-bancairee-5.onrender.com/docs'
+                    ? 'https://gestion-bancairee-5.onrender.com/storage/api-docs/api-docs.json'
                     : 'http://localhost:8000/maryvonne/docs',
             ],
         ],

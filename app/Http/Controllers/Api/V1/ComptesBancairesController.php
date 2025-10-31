@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
 use App\Rules\ValidNciAndTelephone;
 
 class ComptesBancairesController extends Controller
@@ -77,11 +78,12 @@ class ComptesBancairesController extends Controller
         // Filtres par défaut : seulement comptes chèque et épargne actifs (pas de comptes bloqués ou fermés)
         $query->whereIn('type_compte', ['cheque', 'epargne'])
               ->where('statut', 'actif')
-              ->where('est_archive', false);
+              ->where('est_archive', false)
+              ->where('est_bloque', false);
 
         // Filtres optionnels
-        if ($request->has('type') && in_array($request->type, ['cheque', 'epargne'])) {
-            $query->where('type_compte', $request->type);
+        if ($request->has('type_compte') && in_array($request->type_compte, ['cheque', 'epargne'])) {
+            $query->where('type_compte', $request->type_compte);
         }
 
         // Note: Selon US 2.0, on n'affiche pas les comptes bloqués ou fermés
@@ -126,6 +128,7 @@ class ComptesBancairesController extends Controller
         $page = $request->get('page', 1);
 
         $comptes = $query->paginate($limit, ['*'], 'page', $page);
+
 
         // Transformer les données selon le format demandé
         $transformedData = $comptes->getCollection()->map(function($compte) {
@@ -306,10 +309,46 @@ class ComptesBancairesController extends Controller
         try {
             $client = null;
 
-            // Si un ID client est fourni, récupérer le client existant
+            // Si un ID client est fourni, essayer de récupérer le client existant
             if (!empty($validated['client']['id'])) {
-                $client = Client::findOrFail($validated['client']['id']);
+                $client = Client::find($validated['client']['id']);
+
+                // Si le client n'existe pas, créer un nouveau client avec les informations fournies
+                if (!$client) {
+                    // Extraire nom et prénom du titulaire
+                    $titulaireParts = explode(' ', $validated['client']['titulaire'], 2);
+                    $nom = $titulaireParts[1] ?? $titulaireParts[0];
+                    $prenom = $titulaireParts[0];
+
+                    // Générer mot de passe et code pour le nouveau client
+                    $password = $this->generatePassword();
+                    $code = $this->generateCode();
+
+                    // Créer le client avec mot de passe et code
+                    $client = Client::create([
+                        'nom' => $nom,
+                        'prenom' => $prenom,
+                        'email' => $validated['client']['email'],
+                        'telephone' => $validated['client']['telephone'],
+                        'adresse' => $validated['client']['adresse'],
+                        'date_naissance' => now()->subYears(18)->toDateString(), // Valeur par défaut
+                        'password' => $password,
+                        'code' => $code,
+                    ]);
+
+                    // Créer un utilisateur lié au client
+                    $user = User::create([
+                        'name' => $client->nom_complet,
+                        'email' => $client->email,
+                        'password' => $password,
+                        'role' => 'user',
+                        'statut' => 'actif',
+                        'authenticatable_type' => Client::class,
+                        'authenticatable_id' => $client->id,
+                    ]);
+                }
             } else {
+                // Aucun ID fourni, créer un nouveau client
                 // Extraire nom et prénom du titulaire
                 $titulaireParts = explode(' ', $validated['client']['titulaire'], 2);
                 $nom = $titulaireParts[1] ?? $titulaireParts[0];
@@ -419,7 +458,22 @@ class ComptesBancairesController extends Controller
             return $this->errorResponse('Erreur lors de la création du compte bancaire.', 500);
         }
     }
+      
+public function sendVerificationCode($id)
+{
+    $compte = CompteBancaire::findOrFail($id);
 
+    $code = rand(100000, 999999); // ou Str::random(6) si tu veux des lettres
+    $compte->verification_code = $code;
+    $compte->verification_expires_at = Carbon::now()->addMinutes(15);
+    $compte->verification_used = false;
+    $compte->save();
+
+    // Envoi du mail via Mailjet
+    $this->sendMailjetCode($compte->email, $code);
+
+    return response()->json(['message' => 'Code envoyé']);
+}
     /**
      * Générer un numéro de compte unique
      */
@@ -480,10 +534,15 @@ class ComptesBancairesController extends Controller
      *     @OA\Response(response=500, description="Erreur serveur")
      * )
      */
-    public function show($id)
+    public function show(CompteBancaire $compte_bancaire)
     {
-        // Pour les tests, on utilise l'ID directement au lieu du model binding
-        $compte_bancaire = CompteBancaire::with('client:id,nom,prenom,numero_client,telephone,email')->findOrFail($id);
+        // Utiliser le model binding pour récupérer le compte avec ses relations
+        $compte_bancaire->load('client:id,nom,prenom,numero_client,telephone,email');
+
+        // Vérifier si le compte existe
+        if (!$compte_bancaire) {
+            return $this->errorResponse('Compte bancaire non trouvé.', 404);
+        }
 
         // Selon US: Détail compte par ID - Pour les comptes épargne, afficher dates de blocage
         $data = new CompteBancaireResource($compte_bancaire);
@@ -612,10 +671,9 @@ class ComptesBancairesController extends Controller
      *     @OA\Response(response=500, description="Erreur serveur")
      * )
      */
-     public function update(Request $request, $id)
+     public function update(Request $request, CompteBancaire $compte_bancaire)
      {
-         // Pour les tests, on utilise l'ID directement
-         $compte_bancaire = CompteBancaire::findOrFail($id);
+         // Utiliser le model binding pour récupérer le compte
 
          // Validation des données
          $validated = $request->validate([
@@ -707,10 +765,9 @@ class ComptesBancairesController extends Controller
     /**
      * Bloquer un compte épargne
      */
-     public function bloquer(Request $request, $id)
+     public function bloquer(Request $request, CompteBancaire $compte_bancaire)
      {
-         // Pour les tests, on utilise l'ID directement
-         $compte_bancaire = CompteBancaire::findOrFail($id);
+         // Utiliser le model binding pour récupérer le compte
 
          // Validation des données
          $validated = $request->validate([
