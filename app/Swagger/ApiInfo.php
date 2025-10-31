@@ -1,4 +1,7 @@
-<!-- 
+<?php
+
+namespace App\Swagger;
+
 /**
  * @OA\OpenApi(
  *     openapi="3.0.0",
@@ -126,4 +129,8 @@
  *     @OA\Property(property="next_page_url", type="string", nullable=true),
  *     @OA\Property(property="prev_page_url", type="string", nullable=true)
  * )
- */ -->
+ */
+class ApiInfo
+{
+    // Cette classe sert uniquement à contenir les annotations Swagger
+}

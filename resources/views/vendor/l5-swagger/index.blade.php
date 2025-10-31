@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>{{config('l5-swagger.documentations.'.$documentation.'.api.title')}}</title>
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui.css">
-    <link rel="icon" type="image/png" href="https://unpkg.com/swagger-ui-dist@5.10.3/favicon-32x32.png" sizes="32x32"/>
-    <link rel="icon" type="image/png" href="https://unpkg.com/swagger-ui-dist@5.10.3/favicon-16x16.png" sizes="16x16"/>
+    <link rel="stylesheet" type="text/css" href="{{ l5_swagger_asset($documentation, 'swagger-ui.css') }}">
+    <link rel="icon" type="image/png" href="{{ l5_swagger_asset($documentation, 'favicon-32x32.png') }}" sizes="32x32"/>
+    <link rel="icon" type="image/png" href="{{ l5_swagger_asset($documentation, 'favicon-16x16.png') }}" sizes="16x16"/>
     <style>
     html
     {
@@ -103,7 +103,7 @@
                 background: rgba(249,62,62,.25);
             }
             #dark-mode .loading-container .loading:before{
-                border-color: rgba(255,255,255,0.1);
+                border-color: rgba(255,255,255,10%);
                 border-top-color: rgba(255,255,255,.6);
             }
             #dark-mode svg:not(:root){
@@ -119,35 +119,17 @@
 <body @if(config('l5-swagger.defaults.ui.display.dark_mode')) id="dark-mode" @endif>
 <div id="swagger-ui"></div>
 
-@php
-    $operationsSorter = isset($operationsSorter) ? $operationsSorter : null;
-    $configUrl = isset($configUrl) ? $configUrl : null;
-    $validatorUrl = isset($validatorUrl) ? $validatorUrl : null;
-    $docExpansion = config('l5-swagger.defaults.ui.display.doc_expansion', 'none');
-    $filterEnabled = config('l5-swagger.defaults.ui.display.filter');
-    $persistAuthorization = config('l5-swagger.defaults.ui.authorization.persist_authorization') ? 'true' : 'false';
-    $oauth2Enabled = in_array('oauth2', array_column(config('l5-swagger.defaults.securityDefinitions.securitySchemes'), 'type'));
-    $usePkce = config('l5-swagger.defaults.ui.authorization.oauth2.use_pkce_with_authorization_code_grant');
-@endphp
-
-<script src="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-bundle.js"></script>
-<script src="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-standalone-preset.js"></script>
+<script src="{{ l5_swagger_asset($documentation, 'swagger-ui-bundle.js') }}"></script>
+<script src="{{ l5_swagger_asset($documentation, 'swagger-ui-standalone-preset.js') }}"></script>
 <script>
     window.onload = function() {
         // Build a system
-        var operationsSorter = {!! isset($operationsSorter) ? json_encode($operationsSorter) : 'null' !!};
-        var configUrl = {!! isset($configUrl) ? json_encode($configUrl) : 'null' !!};
-        var validatorUrl = {!! isset($validatorUrl) ? json_encode($validatorUrl) : 'null' !!};
-        var docExpansion = {!! json_encode($docExpansion) !!};
-        var filterEnabled = {!! $filterEnabled ? 'true' : 'false' !!};
-        var persistAuthorization = {!! json_encode($persistAuthorization) !!};
-
         const ui = SwaggerUIBundle({
             dom_id: '#swagger-ui',
-            url: "{{ $urlToDocs }}",
-            operationsSorter: operationsSorter,
-            configUrl: configUrl,
-            validatorUrl: validatorUrl,
+            url: "{!! $urlToDocs !!}",
+            operationsSorter: {!! isset($operationsSorter) ? '"' . $operationsSorter . '"' : 'null' !!},
+            configUrl: {!! isset($configUrl) ? '"' . $configUrl . '"' : 'null' !!},
+            validatorUrl: {!! isset($validatorUrl) ? '"' . $validatorUrl . '"' : 'null' !!},
             oauth2RedirectUrl: "{{ route('l5-swagger.'.$documentation.'.oauth2_callback', [], $useAbsolutePath) }}",
 
             requestInterceptor: function(request) {
@@ -165,29 +147,21 @@
             ],
 
             layout: "StandaloneLayout",
-            docExpansion: docExpansion,
+            docExpansion : "{!! config('l5-swagger.defaults.ui.display.doc_expansion', 'none') !!}",
             deepLinking: true,
-            filter: filterEnabled,
-            persistAuthorization: persistAuthorization,
+            filter: {!! config('l5-swagger.defaults.ui.display.filter') ? 'true' : 'false' !!},
+            persistAuthorization: "{!! config('l5-swagger.defaults.ui.authorization.persist_authorization') ? 'true' : 'false' !!}",
 
-            // Fix for responses_Responses rendering issue
-            tryItOutEnabled: true,
-            displayRequestDuration: true,
-            defaultModelsExpandDepth: 1,
-            defaultModelExpandDepth: 1,
-            showExtensions: false,
-            showCommonExtensions: false,
-            supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch']
-        });
+        })
 
-        window.ui = ui;
+        window.ui = ui
 
-        @if($oauth2Enabled)
+        @if(in_array('oauth2', array_column(config('l5-swagger.defaults.securityDefinitions.securitySchemes'), 'type')))
         ui.initOAuth({
-            usePkceWithAuthorizationCodeGrant: @if($usePkce) true @else false @endif
-        });
+            usePkceWithAuthorizationCodeGrant: "{!! (bool)config('l5-swagger.defaults.ui.authorization.oauth2.use_pkce_with_authorization_code_grant') !!}"
+        })
         @endif
-    };
+    }
 </script>
 </body>
 </html>
