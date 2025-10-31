@@ -1,7 +1,4 @@
-<?php
-
-namespace App\Swagger;
-
+<!-- 
 /**
  * @OA\OpenApi(
  *     openapi="3.0.0",
@@ -20,6 +17,10 @@ namespace App\Swagger;
  *     @OA\Server(
  *         url="https://gestion-bancairee-5.onrender.com/api/v1",
  *         description="Serveur de production"
+ *     ),
+ *     @OA\Server(
+ *         url="/maryvonne",
+ *         description="Serveur relatif"
  *     ),
  *     @OA\Tag(
  *         name="Clients",
@@ -125,8 +126,4 @@ namespace App\Swagger;
  *     @OA\Property(property="next_page_url", type="string", nullable=true),
  *     @OA\Property(property="prev_page_url", type="string", nullable=true)
  * )
- */
-class ApiInfo
-{
-    // Cette classe sert uniquement à contenir les annotations Swagger
-}
+ */ -->
