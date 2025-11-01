@@ -105,6 +105,11 @@ RUN mkdir -p public/storage && \
     cp storage/api-docs/api-docs.json public/storage/api-docs.json && \
     chmod 644 public/storage/api-docs.json || true
 
+RUN php artisan vendor:publish --provider="L5Swagger\L5SwaggerServiceProvider" && \
+    mkdir -p public/vendor/swagger-api/swagger-ui/dist && \
+    cp -r vendor/swagger-api/swagger-ui/dist/* public/vendor/swagger-api/swagger-ui/dist/
+
+
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
