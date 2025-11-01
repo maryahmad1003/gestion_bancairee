@@ -330,37 +330,35 @@ class ComptesBancairesController extends Controller
      *                         )
      *                     }
      *                 )
-     *             )
-     *             @OA\Example(
-     *                 example="client_existant",
-     *                 summary="Créer compte pour client existant",
-     *                 value=array(
-     *                     "type" => "cheque",
-     *                     "soldeInitial" => 500000,
-     *                     "devise" => "XOF",
-     *                     "client" => array(
-     *                         "id" => "550e8400-e29b-41d4-a716-446655440000"
-     *                     )
-     *                 )
      *             ),
-     *             @OA\Example(
-     *                 example="nouveau_client",
-     *                 summary="Créer compte avec nouveau client",
-     *                 value=array(
-     *                     "type" => "epargne",
-     *                     "soldeInitial" => 100000,
-     *                     "devise" => "XOF",
-     *                     "client" => array(
-     *                         "titulaire" => "Amadou Diallo",
-     *                         "email" => "amadou.diallo@example.com",
-     *                         "telephone" => "+221771234568",
-     *                         "adresse" => "Thiès, Sénégal",
-     *                         "nci" => "1234567890123"
-     *                     )
-     *                 )
-     *             )
-     *         )
-     *     ),
+     *             @OA\Examples(
+*                 example="client_existant",
+*                 summary="Créer compte pour client existant",
+*                 value={
+*                     "type": "cheque",
+*                     "soldeInitial": 500000,
+*                     "devise": "XOF",
+*                     "client": {
+*                         "id": "550e8400-e29b-41d4-a716-446655440000"
+*                     }
+*                 }
+*             ),
+*             @OA\Examples(
+*                 example="nouveau_client",
+*                 summary="Créer compte avec nouveau client",
+*                 value={
+*                     "type": "epargne",
+*                     "soldeInitial": 100000,
+*                     "devise": "XOF",
+*                     "client": {
+*                         "titulaire": "Amadou Diallo",
+*                         "email": "amadou.diallo@example.com",
+*                         "telephone": "+221771234568",
+*                         "adresse": "Thiès, Sénégal",
+*                         "nci": "1234567890123"
+*                     }
+*                 }
+*             ),
      *     @OA\Response(
      *         response=201,
      *         description="Compte créé avec succès - Mail et SMS de confirmation envoyés automatiquement",
@@ -395,6 +393,37 @@ class ComptesBancairesController extends Controller
      *     ),
      *     @OA\Response(response=400, description="Données invalides"),
      *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=500, description="Erreur serveur")
+     * )
+     */
+    /**
+     * @OA\Post(
+     *     path="/comptes/{compte_bancaire}/send-verification-code",
+     *     summary="Envoyer un code de vérification par email",
+     *     description="Génère et envoie un code de vérification à 6 chiffres par email au propriétaire du compte. Le code expire après 15 minutes.",
+     *     operationId="sendVerificationCode",
+     *     tags={"Comptes Bancaires"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="compte_bancaire",
+     *         in="path",
+     *         required=true,
+     *         description="ID du compte bancaire",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Code de vérification envoyé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Code de vérification envoyé avec succès"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="expires_at", type="string", format="date-time", example="2025-11-01T10:49:50Z")
+     *             ),
+     *             @OA\Property(property="timestamp", type="string", format="date-time")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Compte non trouvé"),
      *     @OA\Response(response=500, description="Erreur serveur")
      * )
      */
@@ -569,37 +598,6 @@ class ComptesBancairesController extends Controller
         }
     }
       
-/**
- * @OA\Post(
- *     path="/comptes/{compte_bancaire}/send-verification-code",
- *     summary="Envoyer un code de vérification par email",
- *     description="Génère et envoie un code de vérification à 6 chiffres par email au propriétaire du compte. Le code expire après 15 minutes.",
- *     operationId="sendVerificationCode",
- *     tags={"Comptes Bancaires"},
- *     security={{"bearerAuth":{}}},
- *     @OA\Parameter(
- *         name="compte_bancaire",
- *         in="path",
- *         required=true,
- *         description="ID du compte bancaire",
- *         @OA\Schema(type="string", format="uuid")
- *     ),
- *     @OA\Response(
- *         response=200,
- *         description="Code de vérification envoyé avec succès",
- *         @OA\JsonContent(
- *             @OA\Property(property="success", type="boolean", example=true),
- *             @OA\Property(property="message", type="string", example="Code de vérification envoyé avec succès"),
- *             @OA\Property(property="data", type="object",
- *                 @OA\Property(property="expires_at", type="string", format="date-time", example="2025-11-01T10:49:50Z")
- *             ),
- *             @OA\Property(property="timestamp", type="string", format="date-time")
- *         )
- *     ),
- *     @OA\Response(response=404, description="Compte non trouvé"),
- *     @OA\Response(response=500, description="Erreur serveur")
- * )
- */
 public function sendVerificationCode($id)
 {
     $compte = CompteBancaire::findOrFail($id);
