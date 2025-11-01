@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Client extends BaseModel
+class Admin extends BaseModel
 {
     use HasFactory;
 
-    protected $table = 'clients';
+    protected $table = 'admins';
 
     protected $fillable = ['user_id'];
 
@@ -16,5 +16,4 @@ class Client extends BaseModel
     {
         return $this->belongsTo(User::class);
     } 
-    
 }

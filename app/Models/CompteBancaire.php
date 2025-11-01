@@ -4,322 +4,73 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Carbon;
 
 class CompteBancaire extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $table = 'comptes_bancaires';
-    protected $keyType = 'string';
-    public $incrementing = false;
 
     protected $fillable = [
-        'numero_compte',
+        'id',
         'client_id',
+        'numero_compte',
         'type_compte',
         'devise',
         'solde_initial',
+        'solde',
         'decouvert_autorise',
         'date_ouverture',
         'statut',
-        'commentaires',
         'est_bloque',
-        'date_debut_blocage',
-        'duree_blocage_jours',
-        'date_fin_blocage',
-        'motif_blocage',
         'est_archive',
-        'date_archivage',
-        'motif_archivage'
+        'motif_archivage',
+        'date_debut_blocage',
+        'date_fin_blocage',
+        'verification_code',
+        'verification_expires_at',
+        'verification_used',
     ];
 
     protected $casts = [
+        'solde' => 'decimal:2',
+        'solde_initial' => 'decimal:2',
         'decouvert_autorise' => 'decimal:2',
-        'date_ouverture' => 'date',
+        'date_ouverture' => 'datetime',
         'date_debut_blocage' => 'datetime',
         'date_fin_blocage' => 'datetime',
-        'date_archivage' => 'datetime',
-        'motif_archivage' => 'string',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'verification_expires_at' => 'datetime',
         'est_bloque' => 'boolean',
         'est_archive' => 'boolean',
+        'verification_used' => 'boolean',
     ];
 
-    protected $appends = ['solde'];
-
-    protected static function boot()
+    public function client()
     {
-        parent::boot();
-
-        static::creating(function ($model) {
-            if (empty($model->id)) {
-                $model->id = (string) Str::uuid();
-            }
-            if (empty($model->numero_compte)) {
-                $model->numero_compte = self::generateNumeroCompte();
-            }
-        });
-
-        // Observer pour déclencher les événements
-        static::created(function ($compte) {
-            // Ici on pourrait déclencher un événement si nécessaire
-            // event(new CompteBancaireCreated($compte));
-        });
-
-        // Scope global pour les comptes non supprimés - désactivé pour les tests
-        // static::addGlobalScope('nonSupprimes', function ($builder) {
-        //     $builder->where('statut', '!=', 'ferme');
-        // });
+        return $this->belongsTo(Client::class);
     }
 
-    /**
-     * Générer un numéro de compte unique selon le format C00123456
-     */
-    private static function generateNumeroCompte(): string
+    public function transactions()
     {
-        do {
-            // Générer un numéro séquentiel à partir de 00123456
-            $lastAccount = self::orderBy('numero_compte', 'desc')->first();
-            if ($lastAccount) {
-                // Extraire le numéro après 'C00'
-                $lastNumber = (int) substr($lastAccount->numero_compte, 3);
-                $newNumber = $lastNumber + 1;
-            } else {
-                $newNumber = 123456; // Numéro de départ
-            }
-
-            $numero = 'C00' . str_pad($newNumber, 6, '0', STR_PAD_LEFT);
-        } while (self::where('numero_compte', $numero)->exists());
-
-        return $numero;
+        return $this->hasMany(Transaction::class);
     }
 
-    // Relations
-    public function client(): BelongsTo
+    protected function getEstBloqueAttribute(): bool
     {
-        return $this->belongsTo(Client::class, 'client_id');
+        return $this->date_debut_blocage && $this->date_fin_blocage &&
+               now()->between($this->date_debut_blocage, $this->date_fin_blocage);
     }
 
-    public function transactions(): HasMany
+    public function bloquer(int $dureeJours, string $motif): bool
     {
-        return $this->hasMany(Transaction::class, 'compte_bancaire_id');
-    }
+        $this->date_debut_blocage = now();
+        $this->date_fin_blocage = now()->addDays($dureeJours);
+        $this->statut = 'bloque';
+        $this->motif_archivage = $motif;
 
-    public function transactionsEmises(): HasMany
-    {
-        return $this->hasMany(Transaction::class, 'compte_bancaire_destinataire_id');
-    }
-
-    // Accessors
-    public function getSoldeFormateAttribute(): string
-    {
-        return number_format($this->solde, 2, ',', ' ') . ' ' . $this->devise;
-    }
-
-    /**
-     * Calcul du solde basé sur les transactions
-     * Solde = Somme des crédits - Somme des débits
-     */
-    public function getSoldeAttribute(): float
-    {
-        // Crédits : dépôts et virements reçus
-        $credits = $this->transactions()
-            ->whereIn('type_transaction', ['credit', 'virement_recus'])
-            ->where('statut', 'validee')
-            ->sum('montant');
-
-        // Débits : retraits et virements émis
-        $debits = $this->transactions()
-            ->whereIn('type_transaction', ['debit', 'virement_emis'])
-            ->where('statut', 'validee')
-            ->sum('montant');
-
-        return $credits - $debits;
-    }
-
-    /**
-     * Calcul du solde initial (pour référence)
-     */
-    public function getSoldeInitialAttribute(): float
-    {
-        return $this->attributes['solde_initial'] ?? 0;
-    }
-
-    // Ancienne méthode supprimée car remplacée par la nouvelle ci-dessous
-
-    public function getPeutDebiterAttribute(): bool
-    {
-        return ($this->solde + $this->decouvert_autorise) > 0;
-    }
-
-    public function getEstBloqueAttribute(): bool
-    {
-        return $this->attributes['est_bloque'] && $this->date_fin_blocage && now()->lessThanOrEqualTo($this->date_fin_blocage);
-    }
-
-    public function getPeutEtreBloqueAttribute(): bool
-    {
-        return $this->type_compte === 'epargne' && $this->statut === 'actif' && !$this->attributes['est_bloque'];
-    }
-
-    // Scopes
-    public function scopeActifs($query)
-    {
-        return $query->where('statut', 'actif');
-    }
-
-    public function scopeParClient($query, $clientId)
-    {
-        return $query->where('client_id', $clientId);
-    }
-
-    public function scopeParType($query, $type)
-    {
-        return $query->where('type_compte', $type);
-    }
-
-    public function scopeNumero($query, $numero)
-    {
-        return $query->where('numero_compte', $numero);
-    }
-
-    public function scopeClient($query, $telephone)
-    {
-        return $query->whereHas('client', function ($q) use ($telephone) {
-            $q->where('telephone', $telephone);
-        });
-    }
-
-    public function scopeBloques($query)
-    {
-        return $query->where('est_bloque', true)
-                    ->where('date_fin_blocage', '>', now());
-    }
-
-    public function scopeEpargne($query)
-    {
-        return $query->where('type_compte', 'epargne');
-    }
-
-    public function scopeArchives($query)
-    {
-        return $query->where('est_archive', true);
-    }
-
-    public function scopeNonArchives($query)
-    {
-        return $query->where('est_archive', false);
-    }
-
-    /**
-     * Bloquer un compte épargne
-     */
-    public function bloquer(int $dureeJours, ?string $motif = null): bool
-    {
-        if (!$this->getPeutEtreBloqueAttribute()) {
-            return false;
-        }
-
-        $this->update([
-            'est_bloque' => true,
-            'date_debut_blocage' => now(),
-            'duree_blocage_jours' => $dureeJours,
-            'date_fin_blocage' => now()->addDays($dureeJours),
-            'motif_blocage' => $motif,
-        ]);
-
-        return true;
-    }
-
-    /**
-     * Débloquer un compte épargne
-     */
-    public function debloquer(): bool
-    {
-        if (!$this->getEstBloqueAttribute()) {
-            return false;
-        }
-
-        $this->update([
-            'est_bloque' => false,
-            'date_debut_blocage' => null,
-            'duree_blocage_jours' => null,
-            'date_fin_blocage' => null,
-            'motif_blocage' => null,
-        ]);
-
-        return true;
-    }
-
-    /**
-     * Archiver un compte et ses transactions
-     */
-    public function archiver(?string $motif = null): bool
-    {
-        if ($this->attributes['est_archive']) {
-            return false;
-        }
-
-        DB::transaction(function () use ($motif) {
-            // Archiver le compte
-            $this->update([
-                'est_archive' => true,
-                'date_archivage' => now(),
-                'motif_archivage' => $motif,
-            ]);
-
-            // Archiver toutes les transactions du compte
-            $this->transactions()->update([
-                'est_archive' => true,
-                'date_archivage' => now(),
-            ]);
-
-            // Archiver les transactions émises
-            $this->transactionsEmises()->update([
-                'est_archive' => true,
-                'date_archivage' => now(),
-            ]);
-        });
-
-        return true;
-    }
-
-    /**
-     * Désarchiver un compte et ses transactions
-     */
-    public function desarchiver(): bool
-    {
-        if (!$this->attributes['est_archive']) {
-            return false;
-        }
-
-        DB::transaction(function () {
-            // Désarchiver le compte
-            $this->update([
-                'est_archive' => false,
-                'date_archivage' => null,
-                'motif_archivage' => null,
-            ]);
-
-            // Désarchiver toutes les transactions du compte
-            $this->transactions()->update([
-                'est_archive' => false,
-                'date_archivage' => null,
-            ]);
-
-            // Désarchiver les transactions émises
-            $this->transactionsEmises()->update([
-                'est_archive' => false,
-                'date_archivage' => null,
-            ]);
-        });
-
-        return true;
+        return $this->save();
     }
 }

@@ -5,6 +5,31 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @OA\Schema(
+ *     schema="CompteBancaire",
+ *     title="Compte Bancaire",
+ *     description="Objet représentant un compte bancaire",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="numero_compte", type="string", example="C00123456"),
+ *     @OA\Property(property="type_compte", type="string", enum={"cheque", "epargne"}, example="cheque"),
+ *     @OA\Property(property="devise", type="string", example="XOF"),
+ *     @OA\Property(property="solde", type="number", format="float", example=500000),
+ *     @OA\Property(property="solde_formate", type="string", example="500 000 XOF"),
+ *     @OA\Property(property="decouvert_autorise", type="number", format="float", example=0),
+ *     @OA\Property(property="date_ouverture", type="string", format="date", example="2023-10-23"),
+ *     @OA\Property(property="statut", type="string", example="actif"),
+ *     @OA\Property(property="peut_debiter", type="boolean", example=true),
+ *     @OA\Property(property="client", type="object",
+ *         @OA\Property(property="id", type="integer", example=1),
+ *         @OA\Property(property="numero_client", type="string", example="CL001"),
+ *         @OA\Property(property="nom_complet", type="string", example="John Doe"),
+ *         @OA\Property(property="telephone", type="string", example="+221771234567")
+ *     ),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
+ */
 class CompteBancaireResource extends JsonResource
 {
     /**

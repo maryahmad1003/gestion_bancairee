@@ -47,4 +47,17 @@ return [
         'retry_attempts' => env('RAILWAY_API_RETRY_ATTEMPTS', 3),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Neon Database Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration pour la base de données Neon utilisée pour les comptes épargne archivés
+    |
+    */
+    'neon' => [
+        'url' => env('NEON_DATABASE_URL'),
+        'api_key' => env('NEON_API_KEY'),
+    ],
+
 ];

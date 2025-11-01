@@ -10,6 +10,28 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @OA\Info(
+ *     title="API de Gestion des Comptes Bancaires",
+ *     description="API pour la gestion des comptes bancaires avec authentification Passport",
+ *     version="1.0.0"
+ * )
+ * @OA\Server(
+ *     url="https://ges-compte-laravel.onrender.com/api/v1",
+ *     description="Serveur de production"
+ * )
+ * @OA\Server(
+ *     url="http://localhost:8000/api/v1",
+ *     description="Serveur de développement"
+ * )
+ * @OA\SecurityScheme(
+ *     securityScheme="bearerAuth",
+ *     type="http",
+ *     description="Token d'accès Bearer généré par Passport",
+ *     scheme="bearer",
+ *     bearerFormat="JWT"
+ * )
+ */
 class AuthController extends Controller
 {
     /**

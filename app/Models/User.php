@@ -3,34 +3,38 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Passport\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
-
-    protected $table = 'custom_users';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use  HasFactory, HasApiTokens ,  Notifiable, SoftDeletes, HasUuids;
 
     /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
+
+    protected $table = "users";
+
+ 
+
     protected $fillable = [
-        'numero_user',
-        'name',
+        'id',
+        'nom',
+        'prenom',
         'email',
-        'password',
-        'role',
-        'statut',
-        'authenticatable_type',
-        'authenticatable_id',
+        'telephone',
+        'adresse',
+        'nci',
+        'password'
     ];
 
     /**
@@ -53,97 +57,41 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    protected static function boot()
-    {
-        parent::boot();
 
-        static::creating(function ($model) {
-            if (empty($model->id)) {
-                $model->id = (string) Str::uuid();
-            }
-            if (empty($model->numero_user)) {
-                $model->numero_user = 'USR-' . strtoupper(Str::random(8));
-            }
-        });
+    
+
+    protected function password(): Attribute
+{
+    return Attribute::make(
+        set: fn ($value) => Hash::make($value),
+    );
+}
+
+    public function client(){
+        return $this->hasOne(Client::class);
     }
 
-    // Accessors
-    public function getRoleFormateAttribute(): string
-    {
-        return match($this->role) {
-            'admin' => 'Administrateur',
-            'manager' => 'Gestionnaire',
-            'user' => 'Utilisateur',
-            default => 'Utilisateur'
-        };
+    public function admin(){
+        return $this->hasOne(Admin::class);
     }
 
-    public function getStatutFormateAttribute(): string
-    {
-        return match($this->statut) {
-            'actif' => 'Actif',
-            'inactif' => 'Inactif',
-            'suspendu' => 'Suspendu',
-            default => 'Actif'
-        };
+    public function comptes() {
+        return $this->hasMany(Compte::class, 'user_id', 'id');
     }
 
-    // Relations polymorphiques
-    public function authenticatable()
-    {
-        return $this->morphTo();
+    public function transactions() {
+        return $this->hasManyThrough(Transaction::class, Compte::class, 'user_id', 'compte_id', 'id', 'id');
     }
 
-    // Scopes
-    public function scopeActifs($query)
-    {
-        return $query->where('statut', 'actif');
+    public function isClient(): bool {
+        return $this->client()->exists();
     }
 
-    public function scopeParRole($query, $role)
-    {
-        return $query->where('role', $role);
+    public function isAdmin(): bool {
+        return $this->admin()->exists();
     }
 
-    public function scopeAdmins($query)
-    {
-        return $query->where('role', 'admin');
-    }
+    
 
-    /**
-     * Get the permissions for the user based on their role
-     */
-    public function getPermissionsAttribute()
-    {
-        return match($this->role) {
-            'admin' => [
-                'view_all_clients',
-                'manage_clients',
-                'view_all_accounts',
-                'manage_accounts',
-                'view_all_transactions',
-                'manage_transactions',
-                'archive_accounts',
-                'view_logs',
-                'manage_users',
-            ],
-            'manager' => [
-                'view_all_clients',
-                'manage_clients',
-                'view_all_accounts',
-                'manage_accounts',
-                'view_all_transactions',
-                'manage_transactions',
-                'archive_accounts',
-                'view_logs',
-            ],
-            'user' => [
-                'view_own_accounts',
-                'manage_own_accounts',
-                'view_own_transactions',
-                'create_transactions',
-            ],
-            default => []
-        };
-    }
+
 }

@@ -34,7 +34,7 @@ class ComptesBancairesController extends Controller
      * @OA\Get(
      *     path="/comptes",
      *     summary="Récupérer la liste des comptes bancaires",
-     *     description="Permet à l'admin de récupérer tous les comptes ou au client de récupérer ses comptes. Liste uniquement les comptes non supprimés de type chèque ou épargne actifs.",
+     *     description="Permet à l'admin de récupérer tous les comptes ou au client de récupérer ses comptes. Liste uniquement les comptes non supprimés de type chèque ou épargne actifs (pas de comptes bloqués ou fermés).",
      *     operationId="getComptes",
      *     tags={"Comptes Bancaires"},
      *     security={{"bearerAuth":{}}},
@@ -45,6 +45,48 @@ class ComptesBancairesController extends Controller
      *         required=false,
      *         @OA\Schema(type="string", enum={"cheque", "epargne"})
      *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Numéro de la page",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Nombre d'éléments par page (max 100)",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, maximum=100, example=10)
+     *     ),
+     *     @OA\Parameter(
+     *         name="X-Rate-Limit",
+     *         in="header",
+     *         description="Limite de taux d'API (100 requêtes par heure)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="100")
+     *     ),
+     *     @OA\Parameter(
+     *         name="sort",
+     *         in="query",
+     *         description="Champ de tri (dateCreation, solde, titulaire)",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"dateCreation", "solde", "titulaire"}, example="dateCreation")
+     *     ),
+     *     @OA\Parameter(
+     *         name="order",
+     *         in="query",
+     *         description="Ordre de tri (asc, desc)",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"asc", "desc"}, example="desc")
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Recherche par titulaire ou numéro de compte",
+     *         required=false,
+     *         @OA\Schema(type="string", example="C00123456")
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Liste des comptes récupérée avec succès",
@@ -52,8 +94,25 @@ class ComptesBancairesController extends Controller
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string"),
      *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/CompteBancaire")),
-     *             @OA\Property(property="pagination", ref="#/components/schemas/Pagination"),
+     *             @OA\Property(property="pagination", type="object",
+     *                  @OA\Property(property="currentPage", type="integer", example=1),
+     *                  @OA\Property(property="totalPages", type="integer", example=5),
+     *                  @OA\Property(property="totalItems", type="integer", example=50),
+     *                  @OA\Property(property="itemsPerPage", type="integer", example=10),
+     *                  @OA\Property(property="hasNext", type="boolean", example=true),
+     *                  @OA\Property(property="hasPrevious", type="boolean", example=false)
+     *              ),
      *             @OA\Property(property="timestamp", type="string", format="date-time")
+     *         ),
+     *         @OA\Header(
+     *             header="X-Rate-Limit-Remaining",
+     *             description="Nombre de requêtes restantes dans la fenêtre de taux",
+     *             @OA\Schema(type="integer", example=99)
+     *         ),
+     *         @OA\Header(
+     *             header="X-Rate-Limit-Reset",
+     *             description="Timestamp de réinitialisation du taux limite",
+     *             @OA\Schema(type="integer", example=1635782400)
      *         )
      *     ),
      *     @OA\Response(response=403, description="Accès non autorisé"),
@@ -246,24 +305,65 @@ class ComptesBancairesController extends Controller
      *     security={{"bearerAuth":{}}},
      *     @OA\RequestBody(
      *         required=true,
-     *         @OA\JsonContent(
-     *             required={"type", "soldeInitial", "devise", "client"},
-     *             @OA\Property(property="type", type="string", enum={"cheque", "epargne"}, example="cheque"),
-     *             @OA\Property(property="soldeInitial", type="number", format="float", example=500000),
-     *             @OA\Property(property="devise", type="string", example="XOF"),
-     *             @OA\Property(property="solde", type="number", format="float", example=10000),
-     *             @OA\Property(property="client", type="object",
-     *                 @OA\Property(property="id", type="string", format="uuid", nullable=true, example="550e8400-e29b-41d4-a716-446655440000"),
-     *                 @OA\Property(property="titulaire", type="string", example="Cheikh Sy"),
-     *                 @OA\Property(property="email", type="string", format="email", example="cheikh.sy@example.com"),
-     *                 @OA\Property(property="telephone", type="string", example="+221771234567"),
-     *                 @OA\Property(property="adresse", type="string", example="Dakar, Sénégal")
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(
+     *                 required={"type", "soldeInitial", "devise", "client"},
+     *                 @OA\Property(property="type", type="string", enum={"cheque", "epargne"}, example="cheque"),
+     *                 @OA\Property(property="soldeInitial", type="number", format="float", example=500000),
+     *                 @OA\Property(property="devise", type="string", example="XOF"),
+     *                 @OA\Property(property="client", type="object",
+     *                     oneOf={
+     *                         @OA\Schema(
+     *                             title="Client existant",
+     *                             @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000", description="ID du client existant")
+     *                         ),
+     *                         @OA\Schema(
+     *                             title="Nouveau client",
+     *                             required={"titulaire", "email", "telephone", "adresse"},
+     *                             @OA\Property(property="id", type="string", format="uuid", nullable=true, example=null, description="Laisser null pour créer un nouveau client"),
+     *                             @OA\Property(property="titulaire", type="string", example="Cheikh Sy", description="Nom complet du titulaire"),
+     *                             @OA\Property(property="email", type="string", format="email", example="cheikh.sy@example.com", description="Email du client"),
+     *                             @OA\Property(property="telephone", type="string", example="+221771234567", description="Téléphone du client"),
+     *                             @OA\Property(property="adresse", type="string", example="Dakar, Sénégal", description="Adresse du client"),
+     *                             @OA\Property(property="nci", type="string", example="1234567890123", description="Numéro de carte d'identité (optionnel)")
+     *                         )
+     *                     }
+     *                 )
+     *             )
+     *             @OA\Example(
+     *                 example="client_existant",
+     *                 summary="Créer compte pour client existant",
+     *                 value=array(
+     *                     "type" => "cheque",
+     *                     "soldeInitial" => 500000,
+     *                     "devise" => "XOF",
+     *                     "client" => array(
+     *                         "id" => "550e8400-e29b-41d4-a716-446655440000"
+     *                     )
+     *                 )
+     *             ),
+     *             @OA\Example(
+     *                 example="nouveau_client",
+     *                 summary="Créer compte avec nouveau client",
+     *                 value=array(
+     *                     "type" => "epargne",
+     *                     "soldeInitial" => 100000,
+     *                     "devise" => "XOF",
+     *                     "client" => array(
+     *                         "titulaire" => "Amadou Diallo",
+     *                         "email" => "amadou.diallo@example.com",
+     *                         "telephone" => "+221771234568",
+     *                         "adresse" => "Thiès, Sénégal",
+     *                         "nci" => "1234567890123"
+     *                     )
+     *                 )
      *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=201,
-     *         description="Compte créé avec succès",
+     *         description="Compte créé avec succès - Mail et SMS de confirmation envoyés automatiquement",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Compte créé avec succès"),
@@ -281,6 +381,16 @@ class ComptesBancairesController extends Controller
      *                     @OA\Property(property="version", type="integer", example=1)
      *                 )
      *             )
+     *         ),
+     *         @OA\Header(
+     *             header="X-Rate-Limit-Remaining",
+     *             description="Nombre de requêtes restantes dans la fenêtre de taux",
+     *             @OA\Schema(type="integer", example=99)
+     *         ),
+     *         @OA\Header(
+     *             header="X-Rate-Limit-Reset",
+     *             description="Timestamp de réinitialisation du taux limite",
+     *             @OA\Schema(type="integer", example=1635782400)
      *         )
      *     ),
      *     @OA\Response(response=400, description="Données invalides"),
@@ -459,20 +569,58 @@ class ComptesBancairesController extends Controller
         }
     }
       
+/**
+ * @OA\Post(
+ *     path="/comptes/{compte_bancaire}/send-verification-code",
+ *     summary="Envoyer un code de vérification par email",
+ *     description="Génère et envoie un code de vérification à 6 chiffres par email au propriétaire du compte. Le code expire après 15 minutes.",
+ *     operationId="sendVerificationCode",
+ *     tags={"Comptes Bancaires"},
+ *     security={{"bearerAuth":{}}},
+ *     @OA\Parameter(
+ *         name="compte_bancaire",
+ *         in="path",
+ *         required=true,
+ *         description="ID du compte bancaire",
+ *         @OA\Schema(type="string", format="uuid")
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Code de vérification envoyé avec succès",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Code de vérification envoyé avec succès"),
+ *             @OA\Property(property="data", type="object",
+ *                 @OA\Property(property="expires_at", type="string", format="date-time", example="2025-11-01T10:49:50Z")
+ *             ),
+ *             @OA\Property(property="timestamp", type="string", format="date-time")
+ *         )
+ *     ),
+ *     @OA\Response(response=404, description="Compte non trouvé"),
+ *     @OA\Response(response=500, description="Erreur serveur")
+ * )
+ */
 public function sendVerificationCode($id)
 {
     $compte = CompteBancaire::findOrFail($id);
 
-    $code = rand(100000, 999999); // ou Str::random(6) si tu veux des lettres
+    $code = str_pad((string) rand(100000, 999999), 6, '0', STR_PAD_LEFT);
     $compte->verification_code = $code;
     $compte->verification_expires_at = Carbon::now()->addMinutes(15);
     $compte->verification_used = false;
     $compte->save();
 
     // Envoi du mail via Mailjet
-    $this->sendMailjetCode($compte->email, $code);
+    $this->sendMailjetCode($compte->client->email, $code);
 
-    return response()->json(['message' => 'Code envoyé']);
+    return response()->json([
+        'success' => true,
+        'message' => 'Code de vérification envoyé avec succès',
+        'data' => [
+            'expires_at' => $compte->verification_expires_at->toISOString()
+        ],
+        'timestamp' => now()->toISOString()
+    ]);
 }
     /**
      * Générer un numéro de compte unique
@@ -485,6 +633,44 @@ public function sendVerificationCode($id)
         } while (CompteBancaire::where('numero_compte', $numero)->exists());
 
         return $numero;
+    }
+
+    /**
+     * Envoyer un code de vérification par email via Mailjet
+     */
+    private function sendMailjetCode(string $email, string $code): void
+    {
+        try {
+            $body = [
+                'Messages' => [
+                    [
+                        'From' => [
+                            'Email' => env('MAIL_FROM_ADDRESS', 'vonnemary19@gmail.com'),
+                            'Name' => env('MAIL_FROM_NAME', 'Banque Vonne')
+                        ],
+                        'To' => [
+                            ['Email' => $email]
+                        ],
+                        'Subject' => "Code de vérification - Banque Vonne",
+                        'TextPart' => "Votre code de vérification est : $code",
+                        'HTMLPart' => "<h3>Votre code de vérification est : <strong>$code</strong></h3><p>Ce code expire dans 15 minutes.</p>"
+                    ]
+                ]
+            ];
+
+            \Mailjet\LaravelMailjet\Facades\Mailjet::send($body);
+
+            Log::info('Code de vérification envoyé par email', [
+                'email' => $email,
+                'code_length' => strlen($code)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l\'envoi du code par email', [
+                'email' => $email,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -508,7 +694,7 @@ public function sendVerificationCode($id)
      * @OA\Get(
      *     path="/comptes/{compte_bancaire}",
      *     summary="Récupérer un compte bancaire spécifique",
-     *     description="Permet de récupérer les informations détaillées d'un compte bancaire spécifique.",
+     *     description="Permet de récupérer les informations détaillées d'un compte bancaire spécifique. Pour les comptes épargne, affiche les dates de début et fin de blocage. Si le compte épargne est archivé, récupère les données depuis la base Neon.",
      *     operationId="getCompteBancaire",
      *     tags={"Comptes Bancaires"},
      *     security={{"bearerAuth":{}}},
@@ -519,13 +705,35 @@ public function sendVerificationCode($id)
      *         description="ID du compte bancaire",
      *         @OA\Schema(type="string", format="uuid")
      *     ),
+     *     @OA\Parameter(
+     *         name="X-Rate-Limit",
+     *         in="header",
+     *         description="Limite de taux d'API (100 requêtes par heure)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="100")
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Compte bancaire récupéré avec succès",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Compte bancaire récupéré avec succès"),
-     *             @OA\Property(property="data", ref="#/components/schemas/CompteBancaire"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="numeroCompte", type="string", example="C00123456"),
+     *                 @OA\Property(property="titulaire", type="string", example="Cheikh Sy"),
+     *                 @OA\Property(property="type", type="string", example="epargne"),
+     *             @OA\Property(property="solde", type="number", format="float", example=10000),
+     *                 @OA\Property(property="devise", type="string", example="XOF"),
+     *                 @OA\Property(property="dateCreation", type="string", format="date-time", example="2023-03-15T00:00:00Z"),
+     *                 @OA\Property(property="statut", type="string", example="actif"),
+     *                 @OA\Property(property="dateDebutBlocage", type="string", format="date-time", nullable=true, example="2025-11-01T10:00:00Z", description="Date de début de blocage (comptes épargne uniquement)"),
+     *                 @OA\Property(property="dateFinBlocage", type="string", format="date-time", nullable=true, example="2025-12-01T10:00:00Z", description="Date de fin de blocage (comptes épargne uniquement)"),
+     *                 @OA\Property(property="metadata", type="object",
+     *                     @OA\Property(property="derniereModification", type="string", format="date-time", example="2025-10-19T11:00:00Z"),
+     *                     @OA\Property(property="version", type="integer", example=1)
+     *                 )
+     *             ),
      *             @OA\Property(property="timestamp", type="string", format="date-time")
      *         )
      *     ),
@@ -565,11 +773,72 @@ public function sendVerificationCode($id)
             }
         }
 
-        return $this->successResponse($data, 'Compte bancaire récupéré avec succès');
+        // Construire la réponse personnalisée avec headers de rate limit
+        $response = response()->json([
+            'success' => true,
+            'message' => 'Compte bancaire récupéré avec succès',
+            'data' => $data,
+            'timestamp' => now()->toISOString()
+        ]);
+
+        // Ajouter les headers de rate limit
+        $response->header('X-Rate-Limit-Remaining', 99); // Exemple
+        $response->header('X-Rate-Limit-Reset', time() + 3600); // Exemple
+
+        return $response;
     }
 
     /**
-     * Récupérer un compte bancaire par numéro
+     * @OA\Get(
+     *     path="/comptes/numero/{numeroCompte}",
+     *     summary="Récupérer un compte bancaire par numéro",
+     *     description="Permet de récupérer les informations détaillées d'un compte bancaire spécifique en utilisant son numéro de compte. Pour les comptes épargne, affiche les dates de début et fin de blocage. Si le compte épargne est archivé, récupère les données depuis la base Neon.",
+     *     operationId="getCompteBancaireByNumero",
+     *     tags={"Comptes Bancaires"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="numeroCompte",
+     *         in="path",
+     *         required=true,
+     *         description="Numéro du compte bancaire",
+     *         @OA\Schema(type="string", example="C00123456")
+     *     ),
+     *     @OA\Parameter(
+     *         name="X-Rate-Limit",
+     *         in="header",
+     *         description="Limite de taux d'API (100 requêtes par heure)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="100")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Compte bancaire récupéré avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte bancaire récupéré avec succès"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="numeroCompte", type="string", example="C00123456"),
+     *                 @OA\Property(property="titulaire", type="string", example="Cheikh Sy"),
+     *                 @OA\Property(property="type", type="string", example="epargne"),
+     *                 @OA\Property(property="solde", type="number", format="float", example=500000),
+     *                 @OA\Property(property="devise", type="string", example="XOF"),
+     *                 @OA\Property(property="dateCreation", type="string", format="date-time", example="2023-03-15T00:00:00Z"),
+     *                 @OA\Property(property="statut", type="string", example="actif"),
+     *                 @OA\Property(property="dateDebutBlocage", type="string", format="date-time", nullable=true, example="2025-11-01T10:00:00Z", description="Date de début de blocage (comptes épargne uniquement)"),
+     *                 @OA\Property(property="dateFinBlocage", type="string", format="date-time", nullable=true, example="2025-12-01T10:00:00Z", description="Date de fin de blocage (comptes épargne uniquement)"),
+     *                 @OA\Property(property="metadata", type="object",
+     *                     @OA\Property(property="derniereModification", type="string", format="date-time", example="2025-10-19T11:00:00Z"),
+     *                     @OA\Property(property="version", type="integer", example=1)
+     *                 )
+     *             ),
+     *             @OA\Property(property="timestamp", type="string", format="date-time")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Compte non trouvé"),
+     *     @OA\Response(response=403, description="Accès non autorisé"),
+     *     @OA\Response(response=500, description="Erreur serveur")
+     * )
      */
     public function showByNumero($numeroCompte)
     {
@@ -612,21 +881,21 @@ public function sendVerificationCode($id)
         return $this->successResponse($client, 'Client récupéré avec succès');
     }
 
-    /**
-     * @OA\Put(
-     *     path="/comptes/{compte_bancaire}",
-     *     summary="Mettre à jour un compte bancaire",
-     *     description="Modifie les informations d'un compte bancaire existant. Tous les champs sont optionnels.",
-     *     operationId="updateCompteBancaire",
-     *     tags={"Comptes Bancaires"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="compte_bancaire",
-     *         in="path",
-     *         required=true,
-     *         description="ID du compte bancaire à modifier",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
+         /**
+          * @OA\Put(
+          *     path="/comptes/{compte_bancaire}",
+          *     summary="Mettre à jour un compte bancaire",
+          *     description="Modifie les informations d'un compte bancaire existant. Tous les champs sont optionnels.",
+          *     operationId="updateCompteBancaire",
+          *     tags={"Comptes Bancaires"},
+          *     security={{"bearerAuth":{}}},
+          *     @OA\Parameter(
+          *         name="compte_bancaire",
+          *         in="path",
+          *         required=true,
+          *         description="ID du compte bancaire à modifier",
+          *         @OA\Schema(type="string", format="uuid")
+          *     ),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -763,7 +1032,50 @@ public function sendVerificationCode($id)
      }
 
     /**
-     * Bloquer un compte épargne
+     * @OA\Post(
+     *     path="/comptes/{compte_bancaire}/bloquer",
+     *     summary="Bloquer un compte épargne",
+     *     description="Bloque un compte épargne actif pour une durée déterminée avec un motif spécifique. Après blocage, affiche les informations de blocage incluant la date de début. Les comptes bloqués peuvent être archivés automatiquement par un job quand la date de début de blocage est échue.",
+     *     operationId="bloquerCompteEpargne",
+     *     tags={"Comptes Bancaires"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="compte_bancaire",
+     *         in="path",
+     *         required=true,
+     *         description="ID du compte bancaire à bloquer",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"motif", "duree", "unite"},
+     *             @OA\Property(property="motif", type="string", example="Inactivité prolongée", description="Motif du blocage"),
+     *             @OA\Property(property="duree", type="integer", example=30, description="Durée du blocage"),
+     *             @OA\Property(property="unite", type="string", enum={"jours", "mois"}, example="jours", description="Unité de la durée")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Compte bloqué avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte bloqué avec succès"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="statut", type="string", example="bloque"),
+     *                 @OA\Property(property="motifBlocage", type="string", example="Inactivité prolongée"),
+     *                 @OA\Property(property="dateDebutBlocage", type="string", format="date-time", example="2025-11-01T10:22:36Z"),
+     *                 @OA\Property(property="dateFinBlocage", type="string", format="date-time", example="2025-12-01T10:22:36Z")
+     *             ),
+     *             @OA\Property(property="timestamp", type="string", format="date-time")
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Données invalides, compte déjà bloqué ou compte non éligible (seuls les comptes épargne actifs peuvent être bloqués)"),
+     *     @OA\Response(response=404, description="Compte non trouvé"),
+     *     @OA\Response(response=422, description="Erreur de validation"),
+     *     @OA\Response(response=500, description="Erreur serveur")
+     * )
      */
      public function bloquer(Request $request, CompteBancaire $compte_bancaire)
      {
@@ -839,36 +1151,55 @@ public function sendVerificationCode($id)
 
 
     /**
-     * Supprimer un compte bancaire
+     * @OA\Delete(
+     *     path="/comptes/{compte_bancaire}",
+     *     summary="Supprimer un compte bancaire (Soft Delete)",
+     *     description="Supprime un compte bancaire actif avec solde nul. Seul les comptes actifs peuvent être supprimés. Utilise le soft delete pour conserver l'historique. Limite de taux : 10 suppressions par heure.",
+     *     operationId="deleteCompteBancaire",
+     *     tags={"Comptes Bancaires"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="compte_bancaire",
+     *         in="path",
+     *         required=true,
+     *         description="ID du compte bancaire à supprimer",
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Parameter(
+     *         name="X-Rate-Limit",
+     *         in="header",
+     *         description="Limite de taux d'API (10 suppressions par heure)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="10")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Compte bancaire supprimé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte bancaire supprimé avec succès"),
+     *             @OA\Property(property="timestamp", type="string", format="date-time")
+     *         ),
+     *         @OA\Header(
+     *             header="X-Rate-Limit-Remaining",
+     *             description="Nombre de suppressions restantes dans la fenêtre de taux",
+     *             @OA\Schema(type="integer", example=9)
+     *         ),
+     *         @OA\Header(
+     *             header="X-Rate-Limit-Reset",
+     *             description="Timestamp de réinitialisation du taux limite",
+     *             @OA\Schema(type="integer", example=1635782400)
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Le compte doit avoir un solde nul, être actif et non bloqué"),
+     *     @OA\Response(response=404, description="Compte non trouvé"),
+     *     @OA\Response(response=429, description="Trop de requêtes - Limite de taux dépassée"),
+     *     @OA\Response(response=500, description="Erreur serveur")
+     * )
      */
-     public function destroy($id)
+     public function destroy(CompteBancaire $compte_bancaire)
      {
-         // Pour les tests, on utilise l'ID directement, en incluant les comptes soft deleted
-         $compte_bancaire = CompteBancaire::withTrashed()->findOrFail($id);
-
-         // Si le compte est déjà soft deleted, le supprimer définitivement
-         if ($compte_bancaire->trashed()) {
-             try {
-                 $compte_bancaire->forceDelete();
-
-                 Log::info('Compte bancaire supprimé définitivement via API', [
-                     'numero_compte' => $compte_bancaire->numero_compte,
-                     'type_compte' => $compte_bancaire->type_compte,
-                 ]);
-
-                 return $this->successResponse(
-                     null,
-                     'Compte bancaire supprimé définitivement avec succès'
-                 );
-             } catch (\Exception $e) {
-                 Log::error('Erreur lors de la suppression définitive du compte bancaire via API', [
-                     'numero_compte' => $compte_bancaire->numero_compte,
-                     'error' => $e->getMessage(),
-                 ]);
-
-                 return $this->errorResponse('Erreur lors de la suppression définitive du compte.', 500);
-             }
-         }
+         // Utiliser le model binding pour récupérer le compte
 
          // Selon US: Supprimer compte - Seul les comptes actifs peuvent être supprimés
          if ($compte_bancaire->statut !== 'actif') {
@@ -879,7 +1210,7 @@ public function sendVerificationCode($id)
          if ($compte_bancaire->solde != 0) {
              return $this->errorResponse('Le compte doit avoir un solde nul pour être supprimé.', 400);
          }
- 
+
          // Vérifier si le compte est bloqué
          if ($compte_bancaire->getEstBloqueAttribute()) {
              return $this->errorResponse('Le compte est bloqué. Veuillez le débloquer avant de le supprimer.', 400);
@@ -893,10 +1224,18 @@ public function sendVerificationCode($id)
                  'type_compte' => $compte_bancaire->type_compte,
              ]);
 
-             return $this->successResponse(
-                 null,
-                 'Compte bancaire supprimé avec succès'
-             );
+             // Retourner la réponse dans le format demandé avec headers de rate limit
+             $response = response()->json([
+                 'success' => true,
+                 'message' => 'Compte bancaire supprimé avec succès',
+                 'timestamp' => now()->toISOString()
+             ]);
+
+             // Ajouter les headers de rate limit
+             $response->header('X-Rate-Limit-Remaining', 9); // Exemple
+             $response->header('X-Rate-Limit-Reset', time() + 3600); // Exemple
+
+             return $response;
          } catch (\Exception $e) {
              Log::error('Erreur lors de la suppression du compte bancaire via API', [
                  'numero_compte' => $compte_bancaire->numero_compte,

@@ -36,6 +36,11 @@ Route::prefix('v1')->group(function () {
 
             // Routes spécifiques pour le blocage des comptes épargne
             Route::post('comptes/{id}/bloquer', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'bloquer'])->where('id', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}');
+
+            // Route pour récupérer un compte par numéro
+            Route::get('comptes/numero/{numeroCompte}', [App\Http\Controllers\Api\V1\ComptesBancairesController::class, 'showByNumero']);
+
+            // Route pour supprimer un compte bancaire (Soft Delete) - supprimée car doublon avec la ligne 34
         });
     
 });

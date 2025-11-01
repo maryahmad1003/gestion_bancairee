@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build:
@@ -19,10 +21,9 @@ services:
     container_name: postgres-db-dev
     restart: unless-stopped
     environment:
-    POSTGRES_DB: ges_bbanc
-    POSTGRES_USER: maryahmad
-    POSTGRES_PASSWORD: Maryahmad13
-
+      POSTGRES_DB: ges_bbanc
+      POSTGRES_USER: maryahmad
+      POSTGRES_PASSWORD: Maryahmad13
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
@@ -61,4 +62,3 @@ volumes:
 networks:
   laravel:
     driver: bridge
-

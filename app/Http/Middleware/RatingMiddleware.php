@@ -2,10 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Traits\ApiResponseTrait;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class RatingMiddleware
 {
@@ -14,28 +16,36 @@ class RatingMiddleware
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
+
+    use ApiResponseTrait;
+        protected int $limit = 10;
+
+        protected int $decaySeconds = 600;
     public function handle(Request $request, Closure $next): Response
     {
-        // Vérifier si la requête atteint la limite de taux
-        if ($request->hasHeader('X-Rate-Limit-Remaining') && $request->header('X-Rate-Limit-Remaining') === '0') {
-            // Enregistrer l'utilisateur qui a atteint la limite
-            $user = $request->user();
-            $ip = $request->ip();
-            $userAgent = $request->userAgent();
-            $endpoint = $request->path();
+      $user = Auth::user();
 
-            Log::warning('Utilisateur a atteint la limite de taux', [
-                'user_id' => $user ? $user->id : null,
-                'ip' => $ip,
-                'user_agent' => $userAgent,
-                'endpoint' => $endpoint,
-                'timestamp' => now()->toISOString(),
-            ]);
+      if(!$user){
+        return $next($request);
+        
+      }
 
-            // Vous pouvez également stocker ces informations dans une base de données
-            // pour analyse ultérieure ou actions administratives
+      $key = "rating_limit_user_{$user->id}";
+
+      $requests = cache()->get($key, 0);
+
+        if($requests >= $this->limit){
+            DB::table('rating_logs')->insert([
+            'user_id' => $user->id,
+            'limit' => $this->limit,
+            'blocked_at' => now(),
+        ]);
+
+            return $this->errorResponse("Vous avez atteint la limite de {$this->limiit} requêtes toutes les {$this->decaySeconds} secondes.", 429);
         }
 
+        cache()->put($key, $requests + 1, now()->addSeconds($this->decaySeconds));
         return $next($request);
+
     }
 }
