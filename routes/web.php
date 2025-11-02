@@ -23,7 +23,7 @@ Route::get('/api/documentation', function () {
     $documentation = 'default';
 
     // Génère l'URL vers le fichier JSON Swagger
-    $urlToDocs = env('APP_ENV') === 'production' ? secure_url('/docs?api-docs.json') : url('/docs?api-docs.json');
+    $urlToDocs = env('APP_ENV') === 'production' ? secure_url('/storage/api-docs.json') : url('/storage/api-docs.json');
 
     $operationsSorter = config('l5-swagger.defaults.operations_sort');
     $configUrl = config('l5-swagger.defaults.additional_config_url');
